@@ -16,7 +16,12 @@ const store = {
 let game = store.get(KEYS.cur, null);
 let history = store.get(KEYS.hist, []);
 let deleted = store.get(KEYS.del, []);
-let syncCfg = store.get(KEYS.sync, null);
+const fileCfg = (() => {
+  const c = window.PIXIES_CONFIG;
+  if (!c || !c.t || !c.t.length) return null;
+  return { token: String.fromCharCode(...c.t.map((v, i) => v ^ ((i * 37 + 11) & 255))), gistId: c.gistId || null, fixed: true };
+})();
+let syncCfg = fileCfg || store.get(KEYS.sync, null);
 let syncMsg = "";
 let syncing = false;
 let syncAgain = false;
@@ -352,7 +357,7 @@ function syncCard() {
     <p class="hint" id="sync-status">${esc(syncMsg || "Connected")}</p>
     <div class="actions">
       <button class="btn small" id="sync-now">Sync now</button>
-      <button class="link" id="disconnect">Disconnect this device</button>
+      ${syncCfg.fixed ? "" : '<button class="link" id="disconnect">Disconnect this device</button>'}
     </div>
   </div>`;
 }
@@ -385,7 +390,7 @@ async function syncSoon() {
   try {
     const r = await PixiesSync.sync(syncCfg, { games: history, deleted });
     syncCfg.gistId = r.gistId;
-    store.set(KEYS.sync, syncCfg);
+    if (!syncCfg.fixed) store.set(KEYS.sync, syncCfg);
     history = r.data.games;
     deleted = r.data.deleted;
     store.set(KEYS.hist, history);
@@ -393,7 +398,7 @@ async function syncSoon() {
     syncMsg = `Synced ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
   } catch (e) {
     syncMsg = e.message;
-    if (e.message === "Token rejected") { syncCfg = null; store.set(KEYS.sync, null); }
+    if (e.message === "Token rejected" && !syncCfg.fixed) { syncCfg = null; store.set(KEYS.sync, null); }
   }
   syncing = false;
   if (tab === "stats") renderStats();
