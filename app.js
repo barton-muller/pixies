@@ -15,11 +15,13 @@ const store = {
 
 let game = store.get(KEYS.cur, null);
 let history = store.get(KEYS.hist, []);
-let prefs = Object.assign({ letters: ["A", "B", "C", "D"], n: 2, pixies: false }, store.get(KEYS.pref, {}));
+let prefs = Object.assign({ letters: ["A", "B", "C", "D"], avatars: [0, 1, 2, 3], n: 2, pixies: false }, store.get(KEYS.pref, {}));
 let tab = "game";
 let lastSaved = null;
 let focusIdx = 0;
 
+const AV = (i) => `img/av${i}.png`;
+const avOf = (g, p) => (g.avatars && g.avatars[p] !== undefined ? g.avatars[p] : g.players.indexOf(p));
 const num = (v) => Math.max(0, parseInt(v, 10) || 0);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -81,8 +83,9 @@ function renderSetup() {
       <div class="bar">New game</div>
       <div class="seg">${[2, 3, 4].map((k) => `<button data-n="${k}" class="${k === n ? "on" : ""}">${k} players</button>`).join("")}</div>
       <div class="letters">
-        ${Array.from({ length: n }, (_, i) => `<input class="c${i}" data-i="${i}" maxlength="1" autocapitalize="characters" autocomplete="off" spellcheck="false" value="${esc(prefs.letters[i] || "")}" placeholder="?" aria-label="Player ${i + 1}">`).join("")}
+        ${Array.from({ length: n }, (_, i) => `<div class="seat"><button class="av c${prefs.avatars[i]}" data-av="${i}" aria-label="Change pixie"><img src="${AV(prefs.avatars[i])}" alt=""></button><input class="c${prefs.avatars[i]}" data-i="${i}" maxlength="1" autocapitalize="characters" autocomplete="off" spellcheck="false" value="${esc(prefs.letters[i] || "")}" placeholder="?" aria-label="Player ${i + 1}"></div>`).join("")}
       </div>
+      <p class="hint">Tap a pixie to change it</p>
       <div class="chips">${used.map((u) => `<button data-chip="${esc(u)}">${esc(u)}</button>`).join("")}</div>
       <label class="switch"><span>Count pixies<small>+1 per pixie in the card photos</small></span><input type="checkbox" id="setup-pix" ${prefs.pixies ? "checked" : ""}></label>
       <div class="err" id="setup-err"></div>
@@ -99,6 +102,16 @@ function renderSetup() {
     inp.addEventListener("focus", () => { focusIdx = +inp.dataset.i; inp.select(); });
     inp.addEventListener("input", () => { inp.value = inp.value.trim().toUpperCase().slice(0, 1); });
   });
+  el.querySelectorAll("[data-av]").forEach((b) => b.addEventListener("click", () => {
+    readLetters();
+    const i = +b.dataset.av;
+    const next = (prefs.avatars[i] + 1) % 4;
+    const other = prefs.avatars.findIndex((a, j) => j !== i && a === next);
+    if (other >= 0) prefs.avatars[other] = prefs.avatars[i];
+    prefs.avatars[i] = next;
+    store.set(KEYS.pref, prefs);
+    renderSetup();
+  }));
   el.querySelectorAll("[data-chip]").forEach((b) => b.addEventListener("click", () => {
     const inputs = [...el.querySelectorAll(".letters input")];
     const target = inputs[focusIdx] || inputs[0];
@@ -124,6 +137,7 @@ function startGame() {
     id: Date.now(),
     started: new Date().toISOString(),
     players,
+    avatars: Object.fromEntries(players.map((p, i) => [p, prefs.avatars[i]])),
     pixies: prefs.pixies,
     scores: Object.fromEntries(players.map((p) => [p, blankScores()])),
   };
@@ -161,7 +175,7 @@ function renderGame() {
   el.innerHTML = `
     <div class="scorebar"><div class="pad row" style="--n:${P.length}">
       <div class="lab">=</div>
-      ${P.map((p, i) => `<div class="pl c${i}" data-pl="${esc(p)}"><b>${esc(p)}</b><span data-out="tot:${esc(p)}">0</span></div>`).join("")}
+      ${P.map((p, i) => `<div class="pl c${avOf(game, p)}" data-pl="${esc(p)}"><b><img src="${AV(avOf(game, p))}" alt="">${esc(p)}</b><span data-out="tot:${esc(p)}">0</span></div>`).join("")}
     </div></div>
     ${rounds}
     <label class="switch card"><span>Count pixies<small>+1 per pixie in the card photos</small></span><input type="checkbox" id="game-pix" ${game.pixies ? "checked" : ""}></label>
@@ -211,6 +225,7 @@ function summarize(g) {
     pixies: g.pixies,
     players: g.players.map((name, i) => ({
       name,
+      av: avOf(g, name),
       total: tot[i],
       rounds: [0, 1, 2].map((r) => scoreOf(g.scores[name], r, g.pixies)),
     })),
@@ -266,7 +281,10 @@ function renderStats() {
   const topScore = Math.max(...history.flatMap((h) => h.players.map((p) => p.total)));
   const avg = Math.round(history.flatMap((h) => h.players.map((p) => p.total)).reduce((a, b) => a + b, 0) / history.reduce((a, h) => a + h.players.length, 0));
 
-  const tag = (n) => `<span class="tag">${esc(n)}</span>`;
+  const lastAv = {};
+  history.forEach((h) => h.players.forEach((p) => { if (p.av !== undefined) lastAv[p.name] = p.av; }));
+  const face = (n, c = "") => (lastAv[n] !== undefined ? `<img class="face ${c}" src="${AV(lastAv[n])}" alt="">` : "");
+  const tag = (n) => `<span class="tag">${face(n)}${esc(n)}</span>`;
   const fmt = (iso) => new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 
   el.innerHTML = `
@@ -291,7 +309,7 @@ function renderStats() {
         <div class="game-row ${h.id === lastSaved ? "new" : ""}">
           <div class="game-main">
             <div class="game-date">${fmt(h.date)}${h.pixies ? ` · <span class="mini">${ICON.pix}</span>` : ""}</div>
-            <div class="game-scores">${[...h.players].sort((a, b) => b.total - a.total).map((p) => `<span class="${h.winners.includes(p.name) ? "w" : ""}">${h.winners.includes(p.name) ? "★ " : ""}${esc(p.name)} ${p.total}</span>`).join("")}</div>
+            <div class="game-scores">${[...h.players].sort((a, b) => b.total - a.total).map((p) => `<span class="${h.winners.includes(p.name) ? "w" : ""}">${h.winners.includes(p.name) ? "★ " : ""}${p.av !== undefined ? `<img class="face" src="${AV(p.av)}" alt="">` : ""}${esc(p.name)} ${p.total}</span>`).join("")}</div>
           </div>
           <button class="del" data-del="${h.id}" aria-label="Delete game">×</button>
         </div>`).join("")}

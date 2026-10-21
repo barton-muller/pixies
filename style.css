@@ -88,10 +88,14 @@ button.btn.small { width: auto; padding: 7px 14px; font-size: 14px; }
   border: 2px solid var(--line); background: #fff; color: var(--ink);
 }
 .seg button.on { border-color: var(--pink); color: var(--pink); background: #fdeef7; }
-.letters { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
+.letters { display: flex; gap: 10px; justify-content: center; margin-bottom: 6px; }
+.seat { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.av { width: 72px; height: 72px; padding: 0; border: 4px solid; border-radius: 50%; background: #fff; cursor: pointer; overflow: hidden; display: block; box-shadow: 0 2px 6px rgba(0,0,0,.25); }
+.av img { width: 100%; height: 100%; display: block; }
+.av.c0 { border-color: var(--p0); } .av.c1 { border-color: var(--p1); } .av.c2 { border-color: var(--p2); } .av.c3 { border-color: var(--p3); }
 .letters input {
-  width: 64px; height: 72px; text-align: center; text-transform: uppercase;
-  font: inherit; font-size: 34px; font-weight: 800; color: #fff;
+  width: 72px; height: 56px; text-align: center; text-transform: uppercase;
+  font: inherit; font-size: 30px; font-weight: 800; color: #fff;
   border: 0; border-radius: 14px; outline: 3px solid transparent; outline-offset: 2px;
 }
 .letters input:focus { outline-color: var(--ink); }
@@ -168,7 +172,7 @@ th:first-child, td:first-child { text-align: left; }
 .game-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
 .game-row:first-of-type { border-top: 0; }
 .game-row.new { animation: flash 1.6s ease-out; }
-@keyframes flash { from { background: #fff1a8; } to { background: transparent; } }
+@keyframes flash { from { background: #dcefc4; } to { background: transparent; } }
 .game-main { flex: 1; min-width: 0; }
 .game-date { font-size: 12px; color: var(--dim); }
 .game-scores { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 3px; font-weight: 700; }
@@ -185,3 +189,8 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .dlg-body { padding: 14px; }
 .dlg-body .game-scores { justify-content: center; font-size: 20px; margin-bottom: 14px; }
 .dlg-actions { display: flex; flex-direction: column; gap: 8px; }
+
+.pl b { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.pl b img { width: 24px; height: 24px; border-radius: 50%; border: 2px solid rgba(255,255,255,.9); background: #fff; }
+.face { width: 22px; height: 22px; border-radius: 50%; vertical-align: -6px; margin-right: 4px; background: #fff; }
+.tag { background: none; color: var(--ink); padding: 0; }
