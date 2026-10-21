@@ -31,7 +31,7 @@ const ICON = {
   area: (m) => svg(`<g fill="currentColor"><rect x="1" y="12.5" width="7.4" height="7.4" rx="1.4"/><rect x="8.3" y="12.5" width="7.4" height="7.4" rx="1.4"/><rect x="15.6" y="12.5" width="7.4" height="7.4" rx="1.4"/><rect x="8.3" y="5.1" width="7.4" height="7.4" rx="1.4"/></g><g fill="#fff" font-size="7.6" font-weight="800" text-anchor="middle" font-family="system-ui,sans-serif"><text x="4.7" y="18.2">${m}</text><text x="12" y="18.2">${m}</text><text x="19.3" y="18.2">${m}</text><text x="12" y="10.8">${m}</text></g>`),
   swirl: svg('<path d="M12 12.4c-1.1.1-1.6-1.2-.8-1.9 1.1-.9 2.9-.1 3.2 1.4.4 2.1-1.5 3.8-3.7 3.5-2.8-.4-4.2-3.4-3.4-5.9.9-3 4.2-4.5 7.1-3.6 3.6 1.1 5 5.3 3.6 8.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>', '3 3 18 18'),
   cross: svg('<path d="M6.5 6.500l11 11M17.5 6.500l-11 11" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>'),
-  pix: '<img src="img/head.png" alt="">',
+  pix: '<img src="img/flower.png" alt="">',
 };
 
 function scoreOf(d, r, withPix) {
