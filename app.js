@@ -23,13 +23,13 @@ let focusIdx = 0;
 const num = (v) => Math.max(0, parseInt(v, 10) || 0);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-const svg = (body, extra = "") => `<svg viewBox="0 0 24 24" ${extra} aria-hidden="true">${body}</svg>`;
+const svg = (body, vb = "0 0 24 24") => `<svg viewBox="${vb}" aria-hidden="true">${body}</svg>`;
 const ICON = {
   full: svg('<rect x="9" y="3" width="11" height="14" rx="2.5" fill="#b9c9a8"/><rect x="4" y="7" width="11" height="14" rx="2.5" fill="#fffaf0" stroke="currentColor" stroke-width="2"/>'),
-  area: svg('<g fill="currentColor"><rect x="3" y="13" width="5.5" height="5.5" rx="1.2"/><rect x="9.25" y="13" width="5.5" height="5.5" rx="1.2"/><rect x="15.5" y="13" width="5.5" height="5.5" rx="1.2"/><rect x="9.25" y="6.75" width="5.5" height="5.5" rx="1.2"/></g>'),
-  swirl: svg('<path d="M12 12.4c-1.1.1-1.6-1.2-.8-1.9 1.1-.9 2.9-.1 3.2 1.4.4 2.1-1.5 3.8-3.7 3.5-2.8-.4-4.2-3.4-3.4-5.9.9-3 4.2-4.5 7.1-3.6 3.6 1.1 5 5.3 3.6 8.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'),
+  area: (m) => svg(`<g fill="currentColor"><rect x="1" y="12.5" width="7.4" height="7.4" rx="1.4"/><rect x="8.3" y="12.5" width="7.4" height="7.4" rx="1.4"/><rect x="15.6" y="12.5" width="7.4" height="7.4" rx="1.4"/><rect x="8.3" y="5.1" width="7.4" height="7.4" rx="1.4"/></g><g fill="#fff" font-size="7.6" font-weight="800" text-anchor="middle" font-family="system-ui,sans-serif"><text x="4.7" y="18.2">${m}</text><text x="12" y="18.2">${m}</text><text x="19.3" y="18.2">${m}</text><text x="12" y="10.8">${m}</text></g>`),
+  swirl: svg('<path d="M12 12.4c-1.1.1-1.6-1.2-.8-1.9 1.1-.9 2.9-.1 3.2 1.4.4 2.1-1.5 3.8-3.7 3.5-2.8-.4-4.2-3.4-3.4-5.9.9-3 4.2-4.5 7.1-3.6 3.6 1.1 5 5.3 3.6 8.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>', '3 3 18 18'),
   cross: svg('<path d="M6.5 6.500l11 11M17.5 6.500l-11 11" stroke="#c9433b" stroke-width="3.6" stroke-linecap="round"/>'),
-  pix: svg('<path d="M12 21c-3.5 0-5.5-2.5-5.5-5.500h11c0 3-2 5.5-5.5 5.500z" fill="#8a6a3f"/><circle cx="12" cy="12.5" r="5.5" fill="#d98a52"/><path d="M5.5 11.500C5.5 7.5 8.5 4.5 12 4.500s6.5 3 6.5 7c-2-1.5-4-2-6.5-2s-4.5.5-6.5 2z" fill="#8a6a3f"/><circle cx="9.8" cy="13" r="1.5" fill="#14110d"/><circle cx="14.2" cy="13" r="1.5" fill="#14110d"/>'),
+  pix: '<img src="img/head.png" alt="">',
 };
 
 function scoreOf(d, r, withPix) {
@@ -146,21 +146,21 @@ function renderGame() {
 
   const rounds = [0, 1, 2].map((r) => `
     <div class="card">
-      <div class="bar">Round ${r + 1}<small>colour area ×${MULT[r]}</small></div>
+      <div class="bar">Round ${r + 1}</div>
       <div class="pad" style="--n:${P.length}">
-        ${row(`<i>${ICON.full}</i>Full cells`, inputs(r, "full"))}
-        ${row(`<i>${ICON.area}</i>Colour area<small>cells ×${MULT[r]}</small>`, inputs(r, "area"))}
-        ${row(`<i>${ICON.swirl}</i>Swirls`, inputs(r, "swirl"))}
-        ${row(`<i>${ICON.cross}</i>Crosses`, inputs(r, "cross"))}
-        ${game.pixies ? row(`<i>${ICON.pix}</i>Pixies`, inputs(r, "pix")) : ""}
-        ${row(`+ Round ${r + 1}`, outs(`r${r}`), "sub")}
+        ${row(`<i>${ICON.full}</i>`, inputs(r, "full"))}
+        ${row(`<i>${ICON.area(MULT[r])}</i>`, inputs(r, "area"))}
+        ${row(`<i>${ICON.swirl}</i>`, inputs(r, "swirl"))}
+        ${row(`<i>${ICON.cross}</i>`, inputs(r, "cross"))}
+        ${game.pixies ? row(`<i>${ICON.pix}</i>`, inputs(r, "pix")) : ""}
+        ${row("+", outs(`r${r}`), "sub")}
         ${r === 1 ? row("1 + 2", outs("c12"), "sub cum") : ""}
       </div>
     </div>`).join("");
 
   el.innerHTML = `
     <div class="scorebar"><div class="pad row" style="--n:${P.length}">
-      <div class="lab">Total</div>
+      <div class="lab">=</div>
       ${P.map((p, i) => `<div class="pl c${i}" data-pl="${esc(p)}"><b>${esc(p)}</b><span data-out="tot:${esc(p)}">0</span></div>`).join("")}
     </div></div>
     ${rounds}
