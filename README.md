@@ -18,9 +18,16 @@ Score counter for the board game Pixies (2–4 players), modelled on the score s
 
 Pixie bonus points are included in saved totals when the toggle was on, so averages mix games played with and without it. History marks pixie games with the flower icon.
 
-## Data
+## Data and sync
 
-All data lives in `localStorage` under `pixies.current`, `pixies.history` and `pixies.prefs`. It is per browser and per device. Clearing site data erases it. There is no export.
+Everything lives in `localStorage` (`pixies.*` keys), per browser. Clearing site data erases it unless sync is on.
+
+**Sync (optional).** Finished games (not in-progress score cards) can be shared between devices through a private GitHub gist:
+
+1. Stats tab → Sync devices → create a *classic* personal access token with only the `gist` scope (the link there pre-fills it).
+2. Paste the token and Connect. The first device creates a secret gist named "Pixies score pad data"; other devices find it automatically from the same token.
+
+Games sync after saving or deleting one, on opening the app, when the tab becomes visible again, and via "Sync now". Games merge by id; deletions are kept as tombstones so they don't come back. The token is stored in the browser's `localStorage` and only ever sent to `api.github.com`. Fine-grained tokens cannot access gists, hence classic. Last-write-wins applies only to the narrow window of two devices syncing at the same instant; the next sync repairs it.
 
 ## Run locally
 
@@ -40,6 +47,7 @@ GitHub Pages deploys from `main` via `.github/workflows/static.yml`. In the repo
 index.html   page shell
 style.css    styling
 app.js       state, scoring, views, stats
+sync.js      gist sync and merge logic
 img/         logo, cover, moss background, avatars, icons
 ```
 

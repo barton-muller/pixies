@@ -1,7 +1,7 @@
 "use strict";
 
 const $ = (s, r = document) => r.querySelector(s);
-const KEYS = { cur: "pixies.current", hist: "pixies.history", pref: "pixies.prefs" };
+const KEYS = { cur: "pixies.current", hist: "pixies.history", pref: "pixies.prefs", del: "pixies.deleted", sync: "pixies.sync" };
 const MULT = [2, 3, 4];
 
 const store = {
@@ -15,6 +15,11 @@ const store = {
 
 let game = store.get(KEYS.cur, null);
 let history = store.get(KEYS.hist, []);
+let deleted = store.get(KEYS.del, []);
+let syncCfg = store.get(KEYS.sync, null);
+let syncMsg = "";
+let syncing = false;
+let syncAgain = false;
 let prefs = Object.assign({ letters: ["A", "B", "C", "D"], avatars: [0, 1, 2, 3], n: 2, pixies: false }, store.get(KEYS.pref, {}));
 let tab = "game";
 let lastSaved = null;
@@ -248,6 +253,7 @@ function finishDialog() {
   $("#save").onclick = () => {
     history.push(s);
     store.set(KEYS.hist, history);
+    syncSoon();
     lastSaved = s.id;
     game = null;
     store.set(KEYS.cur, null);
@@ -263,7 +269,8 @@ function finishDialog() {
 function renderStats() {
   const el = $("#view-stats");
   if (!history.length) {
-    el.innerHTML = `<div class="card empty"><img src="img/pixie.jpg" alt=""><p>No games saved yet.<br>Finished games show up here.</p></div>`;
+    el.innerHTML = `<div class="card empty"><img src="img/pixie.jpg" alt=""><p>No games saved yet.<br>Finished games show up here.</p></div>${syncCard()}`;
+    bindSync();
     return;
   }
   const by = {};
@@ -315,11 +322,91 @@ function renderStats() {
   el.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {
     if (!confirm("Delete this game from history?")) return;
     history = history.filter((h) => h.id !== +b.dataset.del);
+    deleted.push(+b.dataset.del);
     store.set(KEYS.hist, history);
+    store.set(KEYS.del, deleted);
+    syncSoon();
     renderStats();
   }));
+  el.insertAdjacentHTML("beforeend", syncCard());
+  bindSync();
   lastSaved = null;
 }
+
+/* ---------- sync (private GitHub gist) ---------- */
+
+function syncCard() {
+  if (!syncCfg) {
+    return `<div class="card">
+      <div class="bar">Sync devices</div>
+      <p class="hint">Share finished games between devices through a private GitHub gist.
+      <a href="https://github.com/settings/tokens/new?scopes=gist&description=Pixies%20score%20pad" target="_blank" rel="noopener">Create a classic token</a>
+      with only the <b>gist</b> scope, then paste it here on each device.</p>
+      <input class="tok" id="tok" type="password" placeholder="ghp_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="err" id="sync-err">${esc(syncMsg)}</div>
+      <button class="btn" id="connect">Connect</button>
+    </div>`;
+  }
+  return `<div class="card">
+    <div class="bar">Sync devices</div>
+    <p class="hint" id="sync-status">${esc(syncMsg || "Connected")}</p>
+    <div class="actions">
+      <button class="btn small" id="sync-now">Sync now</button>
+      <button class="link" id="disconnect">Disconnect this device</button>
+    </div>
+  </div>`;
+}
+
+function bindSync() {
+  const on = (id, fn) => { const e = document.getElementById(id); if (e) e.addEventListener("click", fn); };
+  on("connect", () => {
+    const token = $("#tok").value.trim();
+    if (!token) return;
+    syncCfg = { token, gistId: null };
+    store.set(KEYS.sync, syncCfg);
+    syncSoon();
+  });
+  on("sync-now", () => syncSoon());
+  on("disconnect", () => {
+    if (!confirm("Disconnect sync on this device? Local games stay.")) return;
+    syncCfg = null;
+    syncMsg = "";
+    store.set(KEYS.sync, null);
+    if (tab === "stats") renderStats();
+  });
+}
+
+async function syncSoon() {
+  if (!syncCfg) return;
+  if (syncing) { syncAgain = true; return; }
+  syncing = true;
+  syncMsg = "Syncing…";
+  paintSync();
+  try {
+    const r = await PixiesSync.sync(syncCfg, { games: history, deleted });
+    syncCfg.gistId = r.gistId;
+    store.set(KEYS.sync, syncCfg);
+    history = r.data.games;
+    deleted = r.data.deleted;
+    store.set(KEYS.hist, history);
+    store.set(KEYS.del, deleted);
+    syncMsg = `Synced ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  } catch (e) {
+    syncMsg = e.message;
+    if (e.message === "Token rejected") { syncCfg = null; store.set(KEYS.sync, null); }
+  }
+  syncing = false;
+  if (tab === "stats") renderStats();
+  else paintSync();
+  if (syncAgain) { syncAgain = false; syncSoon(); }
+}
+
+function paintSync() {
+  const e = $("#sync-status") || $("#sync-err");
+  if (e) e.textContent = syncMsg;
+}
+
+document.addEventListener("visibilitychange", () => { if (!document.hidden) syncSoon(); });
 
 document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("click", () => {
   if (tab === "game" && !game) readLetters();
@@ -328,3 +415,4 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
 }));
 
 show();
+syncSoon();
