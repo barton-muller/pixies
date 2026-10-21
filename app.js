@@ -23,7 +23,14 @@ let focusIdx = 0;
 const num = (v) => Math.max(0, parseInt(v, 10) || 0);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-const SWIRL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 12.5c0-1 1.6-1 1.6.2 0 2-3.4 2-3.4-.8 0-3.2 5.4-3.2 5.4 1.2 0 4.2-7.4 4.2-7.4-1.6"/></svg>`;
+const svg = (body, extra = "") => `<svg viewBox="0 0 24 24" ${extra} aria-hidden="true">${body}</svg>`;
+const ICON = {
+  full: svg('<rect x="9" y="3" width="11" height="14" rx="2.5" fill="#b9c9a8"/><rect x="4" y="7" width="11" height="14" rx="2.5" fill="#fffaf0" stroke="currentColor" stroke-width="2"/>'),
+  area: svg('<g fill="currentColor"><rect x="3" y="13" width="5.5" height="5.5" rx="1.2"/><rect x="9.25" y="13" width="5.5" height="5.5" rx="1.2"/><rect x="15.5" y="13" width="5.5" height="5.5" rx="1.2"/><rect x="9.25" y="6.75" width="5.5" height="5.5" rx="1.2"/></g>'),
+  swirl: svg('<path d="M12 12.4c-1.1.1-1.6-1.2-.8-1.9 1.1-.9 2.9-.1 3.2 1.4.4 2.1-1.5 3.8-3.7 3.5-2.8-.4-4.2-3.4-3.4-5.9.9-3 4.2-4.5 7.1-3.6 3.6 1.1 5 5.3 3.6 8.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>'),
+  cross: svg('<path d="M6.5 6.500l11 11M17.5 6.500l-11 11" stroke="#c9433b" stroke-width="3.6" stroke-linecap="round"/>'),
+  pix: svg('<path d="M12 21c-3.5 0-5.5-2.5-5.5-5.500h11c0 3-2 5.5-5.5 5.500z" fill="#8a6a3f"/><circle cx="12" cy="12.5" r="5.5" fill="#d98a52"/><path d="M5.5 11.500C5.5 7.5 8.5 4.5 12 4.500s6.5 3 6.5 7c-2-1.5-4-2-6.5-2s-4.5.5-6.5 2z" fill="#8a6a3f"/><circle cx="9.8" cy="13" r="1.5" fill="#14110d"/><circle cx="14.2" cy="13" r="1.5" fill="#14110d"/>'),
+};
 
 function scoreOf(d, r, withPix) {
   const c = cats(d, r, withPix);
@@ -141,11 +148,11 @@ function renderGame() {
     <div class="card">
       <div class="bar">Round ${r + 1}<small>colour area ×${MULT[r]}</small></div>
       <div class="pad" style="--n:${P.length}">
-        ${row(`<i>▦</i>Full cells`, inputs(r, "full"))}
-        ${row(`<i>⬛</i>Colour area<small>cells ×${MULT[r]}</small>`, inputs(r, "area"))}
-        ${row(`<i>${SWIRL}</i>Swirls`, inputs(r, "swirl"))}
-        ${row(`<i style="color:var(--p2)">✕</i>Crosses`, inputs(r, "cross"))}
-        ${game.pixies ? row(`<i>🧚</i>Pixies`, inputs(r, "pix")) : ""}
+        ${row(`<i>${ICON.full}</i>Full cells`, inputs(r, "full"))}
+        ${row(`<i>${ICON.area}</i>Colour area<small>cells ×${MULT[r]}</small>`, inputs(r, "area"))}
+        ${row(`<i>${ICON.swirl}</i>Swirls`, inputs(r, "swirl"))}
+        ${row(`<i>${ICON.cross}</i>Crosses`, inputs(r, "cross"))}
+        ${game.pixies ? row(`<i>${ICON.pix}</i>Pixies`, inputs(r, "pix")) : ""}
         ${row(`+ Round ${r + 1}`, outs(`r${r}`), "sub")}
         ${r === 1 ? row("1 + 2", outs("c12"), "sub cum") : ""}
       </div>
@@ -283,7 +290,7 @@ function renderStats() {
       ${[...history].reverse().map((h) => `
         <div class="game-row ${h.id === lastSaved ? "new" : ""}">
           <div class="game-main">
-            <div class="game-date">${fmt(h.date)}${h.pixies ? " · 🧚" : ""}</div>
+            <div class="game-date">${fmt(h.date)}${h.pixies ? ` · <span class="mini">${ICON.pix}</span>` : ""}</div>
             <div class="game-scores">${[...h.players].sort((a, b) => b.total - a.total).map((p) => `<span class="${h.winners.includes(p.name) ? "w" : ""}">${h.winners.includes(p.name) ? "★ " : ""}${esc(p.name)} ${p.total}</span>`).join("")}</div>
           </div>
           <button class="del" data-del="${h.id}" aria-label="Delete game">×</button>
