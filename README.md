@@ -22,17 +22,9 @@ Pixie bonus points are included in saved totals when the toggle was on, so avera
 
 Everything lives in `localStorage` (`pixies.*` keys), per browser. Clearing site data erases it unless sync is on.
 
-**Sync (optional).** Finished games (not in-progress score cards) are shared between devices through a private GitHub gist. Games merge by id; deletions are kept as tombstones so they don't come back. Last-write-wins applies only if two devices sync in the same instant; the next sync repairs it. Local history on each device is the master copy, so a lost gist is rebuilt from any device.
+**Sync (optional).** Finished games (not in-progress score cards) can be shared between devices through a GitHub gist. Games merge by id; deletions are remembered so they don't come back. Each device keeps its own full history, so a lost gist is rebuilt from any device. Games sync after saving or deleting one, on opening the app, when the tab becomes visible again, and via "Sync now".
 
-Setup, once, on your own machine:
-
-1. Create a *classic* personal access token with only the `gist` scope: <https://github.com/settings/tokens/new?scopes=gist&description=Pixies%20score%20pad>. Fine-grained tokens cannot access gists.
-2. Run `python3 tools/setup_sync.py`. It asks for the token (hidden), creates the secret gist and writes `config.js` with the token obfuscated and the gist id.
-3. Commit and push `config.js`. Devices then sync automatically with nothing to enter.
-
-The token ends up in the deployed site, so treat it as public: anyone who inspects the page can recover it, and it can edit every gist on that account (not repos). Obfuscation only stops secret scanners. Use an account whose gists you don't care about, and revoke the token at github.com/settings/tokens if needed. With an empty `config.js` the Stats tab shows a manual token box instead.
-
-Games sync after saving or deleting one, on opening the app, when the tab becomes visible again, and via "Sync now".
+To enable: run `python3 tools/setup_sync.py` and commit the generated `config.js`. With an empty `config.js` the Stats tab offers a manual setup instead.
 
 ## Run locally
 
@@ -53,7 +45,7 @@ index.html   page shell
 style.css    styling
 app.js       state, scoring, views, stats
 sync.js      gist sync and merge logic
-config.js    sync token (obfuscated) and gist id, written by tools/setup_sync.py
+config.js    sync settings, written by tools/setup_sync.py
 tools/       setup_sync.py
 img/         logo, cover, moss background, avatars, icons
 ```

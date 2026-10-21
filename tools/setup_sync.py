@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Create the sync gist and write config.js with an obfuscated token.
+"""Create the sync gist and write config.js.
 
 Usage: python3 tools/setup_sync.py [existing-gist-id]
-The token is read with a hidden prompt and never printed.
+Credentials are read with a hidden prompt and never printed.
 """
 import getpass
 import json
