@@ -218,19 +218,23 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .pf { margin: 0; text-align: center; }
 .pf figcaption { font-size: 12px; max-width: 90px; margin: 4px auto 0; line-height: 1.2; }
 
-.bc { box-sizing: border-box; position: absolute; width: 56px; height: 78px; border-radius: 8px; border: 3px solid #fffaf0; background: var(--cc, #999); box-shadow: 0 1px 4px rgba(0,0,0,.35); color: #fff; overflow: hidden; }
+.bc { box-sizing: border-box; position: absolute; width: 56px; height: 86px; border-radius: 8px; border: 3px solid #fffaf0; background: var(--cc, #999); box-shadow: 0 0 0 1px #151515, 0 2px 4px rgba(0,0,0,.35); color: #fff; overflow: hidden; }
 .bc.inhand { position: relative; }
 .bc b { position: absolute; left: 0; right: 0; top: 3px; text-align: center; font-size: 22px; line-height: 26px; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .bsw, .bxx { position: absolute; top: 3px; display: flex; flex-direction: column; gap: 1px; }
 .bsw { left: 3px; } .bxx { right: 3px; }
 .bsw svg, .bxx svg { width: 11px; height: 11px; display: block; }
-.bsp { position: absolute; left: 3px; bottom: 3px; width: 14px; height: 14px; background: #fffaf0; color: var(--cc); border-radius: 4px; padding: 2px; }
+.bsp { position: absolute; left: 3px; top: 5px; display: flex; align-items: center; gap: 1px; color: #fff; font-size: 11px; font-weight: 800; line-height: 1; }
+.bsp svg { width: 10px; height: 10px; display: block; }
+.bsp u { width: 11px; height: 11px; box-sizing: border-box; border-radius: 3px; background: var(--cc); border: 1.5px solid #fff; display: block; }
+.bc.sp b { padding-left: 22px; }
 .bown { position: absolute; left: 3px; bottom: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--forest); color: #fff; font-size: 11px; font-weight: 800; text-align: center; line-height: 16px; }
 .bval { position: absolute; right: 3px; bottom: 3px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 10px; background: #fffaf0; color: var(--forest); font-size: 13px; font-weight: 800; text-align: center; line-height: 20px; }
 .bmark { position: absolute; left: 50%; top: 32px; transform: translateX(-50%); width: 22px; height: 22px; border-radius: 50%; font-size: 14px; font-weight: 800; text-align: center; line-height: 22px; background: #fffaf0; }
 .bmark.ok { color: #2e7d32; } .bmark.no { color: var(--p2); }
 .c-b { --cc: var(--p3); } .c-g { --cc: var(--p0); } .c-y { --cc: var(--p1); } .c-r { --cc: var(--p2); }
 .c-j { background: conic-gradient(from 45deg, var(--p3), var(--p0), var(--p1), var(--p2), var(--p3)); --cc: var(--forest); }
+.c-d, .mt.c-d { background: linear-gradient(135deg, #c76a2b, #8f2f2a 45%, #6b8e3a 72%, #3d86b8); }
 .bc.down { background: linear-gradient(135deg, #c76a2b, #8f2f2a 45%, #6b8e3a 72%, #3d86b8); }
 .bc.fly { z-index: 500 !important; }
 .bc.pick { cursor: pointer; animation: pulse 1.4s ease-in-out infinite; }
@@ -238,7 +242,7 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 
 .hwho { text-align: center; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
 .hand { display: flex; justify-content: center; gap: 8px; }
-.hs { width: 56px; height: 78px; position: relative; }
+.hs { width: 56px; height: 86px; position: relative; }
 .hs.gone { border: 2px dashed #b9ae94; border-radius: 8px; }
 .hdown { text-align: center; font-size: 22px; font-weight: 800; color: var(--forest); margin: 4px 0; }
 

@@ -7,18 +7,18 @@ const BATTLE = (() => {
   const signed = (v) => (v < 0 ? `−${-v}` : `${v}`);
   const reduced = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const CW = 56, CH = 78, STEP = 24, PAD = 8, CELL_W = 84, CELL_WB = 124;
+  const CW = 56, CH = 86, STEP = 24, PAD = 8, CELL_W = 90, CELL_WB = 128;
 
   /* ---------- cards ---------- */
 
   function cardHtml(id, s, o = {}) {
     const inner = o.down ? "" : `
       <div class="bsw">${rep(SW, s.sw || 0)}</div><b>${s.n}</b><div class="bxx">${rep(XX, s.x || 0)}</div>
-      ${s.sp ? `<span class="bsp">${SW}</span>` : ""}
+      ${s.sp ? `<span class="bsp">${SW}<i>/</i><u></u></span>` : ""}
       ${s.owner ? `<span class="bown">${s.owner}</span>` : ""}
       ${o.val !== undefined ? `<span class="bval">${signed(o.val)}</span>` : ""}
       ${o.mark ? `<span class="bmark ${o.mark === "✓" ? "ok" : "no"}">${o.mark}</span>` : ""}`;
-    return `<div class="bc ${o.down ? "down" : "c-" + s.c}${o.cls ? " " + o.cls : ""}" data-id="${id}" data-rot="${o.rot || 0}" style="${o.style || ""}">${inner}</div>`;
+    return `<div class="bc ${o.down ? "down" : "c-" + s.c}${s.sp && !o.down ? " sp" : ""}${o.cls ? " " + o.cls : ""}" data-id="${id}" data-rot="${o.rot || 0}" style="${o.style || ""}">${inner}</div>`;
   }
 
   const scard = (s, label = "", val) => `<figure class="pf">${cardHtml("", s, { cls: "inhand", val })}<figcaption>${label}</figcaption></figure>`;
@@ -41,8 +41,8 @@ const BATTLE = (() => {
     return `<div class="mt c-${o.c}${o.fin === false ? " unf" : ""}${o.hi ? " hi" : ""}"><small>${n}</small>${mid}</div>`;
   }
 
-  const G1 = [["g", 2], ["b", 1], ["y"], ["g", "3+1"], ["b", 0, 1, 0], ["b"], ["y"], ["b", 1], ["r", 0, 0, 0]];
-  const G2 = [["y"], ["g", 1], ["r", 0, 1], ["b", 2], ["y", 0, 0, 0], ["r"], ["g", 0, 0, 0], ["y"], ["r"]];
+  const G1 = [["g", 2], ["b", 1], ["y"], ["g", "3+1"], ["b", 0, 1, 0], ["b"], ["y"], ["b", 1], ["d", 0, 0, 0]];
+  const G2 = [["y"], ["g", 1], ["r", 0, 1], ["b", 2], ["d", 0, 0, 0], ["r"], ["g", 0, 0, 0], ["d", 0, 0, 0], ["r"]];
   const boardOf = (G, details, hi) =>
     Object.fromEntries(G.map(([c, sw, x, fin], k) => [k + 1, tile(k + 1, { c, sw: details ? sw : 0, x: details ? x : 0, fin: fin !== 0, hi: hi.includes(k + 1) })]));
 
@@ -77,7 +77,7 @@ const BATTLE = (() => {
       } else {
         const x = cx + (i - (n - 1) / 2) * 3, y = h / 2 + ((n - 1) / 2 - i) * 3;
         g[e.id] = { cx: x, cy: y, rot: -90, z: i * 3 + 1 };
-        if (e.boost) g[e.boost] = { cx: x, cy: y - 36, rot: 0, z: i * 3 };
+        if (e.boost) g[e.boost] = { cx: x, cy: y - 22, rot: 0, z: i * 3 };
       }
     });
     return g;
@@ -116,6 +116,11 @@ const BATTLE = (() => {
 
   const S = (label, cells, piles = {}, fin = []) => ({ label, cells, piles, fin });
   const ROW = [4, 5, 6];
+  const LIVE = {
+    g4: { n: 4, c: "g" }, g6: { n: 6, c: "g" },
+    y: { n: 5, c: "y", sw: 1 }, b: { n: 5, c: "b", sw: 1 }, s: { n: 5, c: "g", sp: 1 },
+    r: { n: 5, c: "r", sw: 2 }, rb: { n: 2, c: "r", sw: 2 },
+  };
 
   const steps = [
     {
@@ -149,48 +154,39 @@ const BATTLE = (() => {
     },
     {
       t: "Card value",
-      p: "A card's value is <b>swirls minus crosses</b>. The value decides whether it may cover an opponent's card.",
+      p: "A card's value is its <b>swirls</b>, or minus its <b>crosses</b>. A card never has both. The value decides whether it may cover an opponent's card.",
       static: () => row(
         scard({ n: 2, c: "y", sw: 3 }, "3 swirls", 3),
         scard({ n: 4, c: "r", x: 2 }, "2 crosses", -2),
-        scard({ n: 8, c: "g", sw: 2, x: 1 }, "2 swirls, 1 cross", 1)),
-    },
-    {
-      t: "Special cards",
-      p: "A special card (swirl + colour symbol) also gains +1 for every <i>other</i> card of its colour on the board right now. Cards in a hand or in the deck don't count.",
-      cards: { g4: { n: 4, c: "g" }, g6: { n: 6, c: "g" }, s: { n: 5, c: "g", sw: 1, sp: 1 } },
-      stages: [
-        { who: "A plays", hand: ["s"], vals: { s: 1 }, fields: [S("Grid 1", ROW, { 4: ["g4"], 6: ["g6"] })], cap: "In hand, the special green 5 is worth its 1 swirl." },
-        { hand: [], vals: { s: 3 }, fields: [S("Grid 1", ROW, { 4: ["g4"], 5: ["s"], 6: ["g6"] })], cap: "On the board it also counts the two other green cards: 1 + 2 = 3." },
-      ],
+        scard({ n: 8, c: "g" }, "no symbols", 0)),
     },
     {
       t: "A first card",
-      p: "An empty cell takes any card with the right number. B opens cell 5 with a yellow 5: one swirl, value 1.",
-      cards: { y: { n: 5, c: "y", sw: 1 } },
+      p: "Live play starts here and carries on for the next two steps. Two green cards of A's are already on cells 4 and 6. An empty cell takes any card with the right number: B opens cell 5 with a yellow 5, one swirl, value 1.",
+      cards: LIVE,
       stages: [
-        { who: "B plays", hand: ["y"], fields: [S("Grid 1", ROW)], cap: "Cell 5 is empty." },
-        { hand: [], vals: { y: 1 }, fields: [S("Grid 1", ROW, { 5: ["y"] })], cap: "B's yellow 5 sits on cell 5." },
+        { who: "B plays", hand: ["y"], fields: [S("Grid 1", ROW, { 4: ["g4"], 6: ["g6"] })], cap: "Cell 5 is empty." },
+        { hand: [], vals: { y: 1 }, fields: [S("Grid 1", ROW, { 4: ["g4"], 5: ["y"], 6: ["g6"] })], cap: "B's yellow 5 sits on cell 5, value 1." },
       ],
     },
     {
-      t: "Covering an opponent",
-      p: "To cover an opponent's top card, your card's value must be <b>strictly higher</b>. Tap the card that can cover B's yellow 5.",
-      cards: { y: { n: 5, c: "y", sw: 1 }, b: { n: 5, c: "b", sw: 1 }, g: { n: 5, c: "g", sw: 2 } },
-      quiz: { valid: ["g"], bad: { b: "A value of 1 is not higher than 1. Try the other card." } },
+      t: "Special cards and covering",
+      p: "To cover an opponent's top card your card's value must be <b>strictly higher</b>. A special card (swirl / colour square) is worth 1 for every card of its colour on the board: counting the cards already there while in your hand, and itself too once it is placed. Tap the card that can cover B's yellow 5.",
+      cards: LIVE,
+      quiz: { valid: ["s"], bad: { b: "A value of 1 is not higher than 1. Try the other card." } },
       stages: [
-        { who: "A plays: tap a card", hand: ["b", "g"], vals: { b: 1, g: 2, y: 1 }, fields: [S("Grid 1", ROW, { 5: ["y"] })], cap: "B's yellow 5 is worth 1. Which card can cover it?" },
-        { hand: ["b"], vals: { g: 2, y: 1 }, marks: { g: "✓" }, fields: [S("Grid 1", ROW, { 5: ["y", "g"] })], cap: "2 beats 1. A's green 5 is on top." },
+        { who: "A plays: tap a card", hand: ["b", "s"], vals: { b: 1, s: 2, y: 1 }, fields: [S("Grid 1", ROW, { 4: ["g4"], 5: ["y"], 6: ["g6"] })], cap: "Two green cards are on the board, so the special green is worth 2 in hand." },
+        { hand: ["b"], vals: { s: 3, y: 1 }, marks: { s: "✓" }, fields: [S("Grid 1", ROW, { 4: ["g4"], 5: ["y", "s"], 6: ["g6"] })], cap: "Placed on the board it counts itself as well: 3 green cards, value 3. It beats 1." },
       ],
     },
     {
       t: "Boosters",
       p: "Play two cards of the same colour at once and put the second behind the first, turned sideways so its swirls show. Their values add up, they count as <b>one card</b> in the pile, and they use two of your four plays. When a pile reaches three cards, the whole pile is turned sideways and stacked neatly. The booster stays visible and its swirls still count at the end.",
-      cards: { y: { n: 5, c: "y", sw: 1 }, g: { n: 5, c: "g", sw: 2 }, r: { n: 5, c: "r", sw: 1 }, rb: { n: 2, c: "r", sw: 2 } },
+      cards: LIVE,
       stages: [
-        { who: "B plays two cards", hand: ["r", "rb"], vals: { g: 2, r: 1 }, fields: [S("Grid 1", ROW, { 5: ["y", "g"] })], cap: "A is on top with 2. A red 5 alone is worth only 1." },
-        { hand: [], vals: { r: 3 }, marks: { r: "✓" }, fields: [S("Grid 1", ROW, { 5: ["y", "g", { id: "r", boost: "rb" }] })], cap: "With a red 2-swirl booster behind it: 1 + 2 = 3. Higher than 2." },
-        { hand: [], fields: [S("Grid 1", ROW, { 5: ["y", "g", { id: "r", boost: "rb" }] }, [5])], cap: "Three cards: finished. B wins cell 5." },
+        { who: "B plays two cards", hand: ["r", "rb"], vals: { s: 3, r: 2 }, fields: [S("Grid 1", ROW, { 4: ["g4"], 5: ["y", "s"], 6: ["g6"] })], cap: "A's special is on top with 3. B's red 5 alone is worth only 2." },
+        { hand: [], vals: { r: 4 }, marks: { r: "✓" }, fields: [S("Grid 1", ROW, { 4: ["g4"], 5: ["y", "s", { id: "r", boost: "rb" }], 6: ["g6"] })], cap: "A red booster with 2 swirls behind it: 2 + 2 = 4. Higher than 3." },
+        { hand: [], fields: [S("Grid 1", ROW, { 4: ["g4"], 5: ["y", "s", { id: "r", boost: "rb" }], 6: ["g6"] }, [5])], cap: "Three cards: the whole pile turns sideways. B wins cell 5." },
       ],
     },
     {
@@ -250,7 +246,7 @@ const BATTLE = (() => {
     },
     {
       t: "Scoring",
-      p: "Score the whole board, both grids together. Here A holds the blue and green tiles. Dashed tiles are unfinished. Colour regions run across the gap between the grids.",
+      p: "Score the whole board, both grids together. Here A holds the blue and green tiles. Dashed tiles are unfinished and card backs are face-down cards, worth nothing on top. Colour regions run across the gap between the grids.",
       static: () => `${row(board(boardOf(G1, true, [2, 5, 6, 8]), boardOf(G2, true, [4])))}
       <table class="bscore">
         <tr><td>Finished piles on top: grid 1 (1+2+4+6+8) and grid 2 (2+4)</td><td>27</td></tr>
