@@ -77,7 +77,9 @@ function show() {
   $("#view-setup").hidden = !(tab === "game" && !game);
   $("#view-game").hidden = !(tab === "game" && game);
   $("#view-stats").hidden = tab !== "stats";
+  $("#view-battle").hidden = tab !== "battle";
   if (tab === "stats") renderStats();
+  else if (tab === "battle") BATTLE.render();
   else if (game) renderGame();
   else renderSetup();
 }

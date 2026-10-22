@@ -18,6 +18,10 @@ Score counter for the board game Pixies (2–4 players), modelled on the score s
 
 Pixie bonus points are included in saved totals when the toggle was on, so averages mix games played with and without it. History marks pixie games with the flower icon.
 
+## Pix your battles
+
+The Battles tab is a step-through visual explainer for a two-player house variant: shared 3×3 grids, piles won by the top card, boosters, jokers and face-down cards, ending with a worked scoring example that uses the Round 2 block of the score pad. The content lives in `battle.js`.
+
 ## Data and sync
 
 Everything lives in `localStorage` (`pixies.*` keys), per browser. Clearing site data erases it unless sync is on.
@@ -45,6 +49,7 @@ index.html   page shell
 style.css    styling
 app.js       state, scoring, views, stats
 sync.js      gist sync and merge logic
+battle.js    rules explainer for the house variant
 config.js    sync settings, written by tools/setup_sync.py
 tools/       setup_sync.py
 img/         logo, cover, moss background, avatars, icons
