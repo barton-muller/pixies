@@ -7,7 +7,7 @@ const BATTLE = (() => {
   const signed = (v) => (v < 0 ? `−${-v}` : `${v}`);
   const reduced = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const CW = 56, CH = 86, STEP = 24, PAD = 8, CELL_W = 96, CELL_WB = 130;
+  const CW = 56, CH = 86, STEP = 24, PAD = 8, CELL_W = 90, CELL_WB = 128;
 
   /* ---------- cards ---------- */
 
@@ -51,17 +51,11 @@ const BATTLE = (() => {
 
   const ent = (e) => (typeof e === "string" ? { id: e } : e);
 
-  // Show a cell only if it is the focus (middle) cell or ever holds a card in this step.
-  function shownCells(step, fi) {
-    const cells = step.stages[0].fields[fi].cells;
-    return cells.filter((n, k) => k === 1 || step.stages.some((st) => ((st.fields[fi].piles || {})[n] || []).length));
-  }
-
   function dimsOf(step) {
     const dims = [];
     step.stages.forEach((st) => (st.fields || []).forEach((f, fi) => {
       const d = (dims[fi] ||= { w: {}, h: 98 });
-      shownCells(step, fi).forEach((n) => {
+      f.cells.forEach((n) => {
         const p = ((f.piles || {})[n] || []).map(ent);
         const boost = p.some((e) => e.boost);
         d.w[n] = Math.max(d.w[n] || CELL_W, boost ? CELL_WB : CELL_W);
@@ -104,7 +98,7 @@ const BATTLE = (() => {
 
     const fields = (st.fields || []).map((f, fi) => {
       const d = dims[fi];
-      const cells = shownCells(step, fi).map((n) => {
+      const cells = f.cells.map((n) => {
         const entries = ((f.piles || {})[n] || []).map(ent);
         const fin = (f.fin || []).includes(n);
         const g = geometry(entries, fin, d.h);
@@ -114,7 +108,7 @@ const BATTLE = (() => {
         });
         return `<div class="cell" style="width:${d.w[n]}px;height:${d.h}px"><span class="cn">${n}</span>${cards.join("")}</div>`;
       });
-      return `<div class="field"><div class="flabel">${f.label || ""}</div><div class="frow">${cells.length > 1 ? `<div class="cell edge"></div>` : ""}${cells.join("")}${cells.length > 1 ? `<div class="cell edge r"></div>` : ""}</div></div>`;
+      return `<div class="field"><div class="flabel">${f.label || ""}</div><div class="frow"><div class="cell edge"></div>${cells.join("")}<div class="cell edge r"></div></div></div>`;
     });
     return hand + fields.join("");
   }

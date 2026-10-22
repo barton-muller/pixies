@@ -250,8 +250,8 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .flabel { text-align: center; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; }
 .frow { display: flex; justify-content: center; gap: 6px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); mask-image: linear-gradient(90deg, transparent, #000 14%, #000 86%, transparent); }
 .cell { position: relative; flex: none; border: 2px dashed #b9ae94; border-radius: 10px; }
-.cell.edge { width: 26px; border-right: 0; border-radius: 10px 0 0 10px; }
-.cell.edge.r { border-right: 2px dashed #b9ae94; border-left: 0; border-radius: 0 10px 10px 0; }
+.cell.edge { width: 84px; margin-left: -56px; }
+.cell.edge.r { margin-left: 0; margin-right: -56px; }
 .cn { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; font-size: 30px; font-weight: 800; color: #cfc5ab; }
 
 .bdecks { display: flex; flex-direction: column; gap: 12px; }
