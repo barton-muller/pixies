@@ -23,6 +23,7 @@ const BATTLE = (() => {
 
   const scard = (s, label = "", val) => `<figure class="pf">${cardHtml("", s, { cls: "inhand", val })}<figcaption>${label}</figcaption></figure>`;
   const row = (...x) => `<div class="brow">${x.join("")}</div>`;
+  const rowFit = (...x) => `<div class="brow one">${x.join("")}</div>`;
 
   /* ---------- static boards ---------- */
 
@@ -139,7 +140,7 @@ const BATTLE = (() => {
     {
       t: "Rounds and hands",
       p: "Draw up to six cards, then take turns playing <b>four</b> of them. Playing two cards at once (booster or joker) uses <b>two</b> of your four plays. Once you have made your four plays, your opponent keeps taking consecutive turns until they have made theirs. Before the next round, each of your two leftovers goes either to the bottom of your deck or stays in your hand. Most cards end up stacked on others, so a game usually takes many rounds.",
-      static: () => row(
+      static: () => rowFit(
         ...[{ n: 2, c: "g" }, { n: 6, c: "b", sw: 2 }, { n: 9, c: "g", x: 1 }, { n: 4, c: "b", sw: 1 }].map((c) => scard(c, "play")),
         ...[{ n: 5, c: "b" }, { n: 1, c: "g", sw: 3 }].map((c) => scard(c, "left over"))),
     },

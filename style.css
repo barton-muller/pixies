@@ -218,7 +218,7 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .pf { margin: 0; text-align: center; }
 .pf figcaption { font-size: 12px; max-width: 90px; margin: 4px auto 0; line-height: 1.2; }
 
-.bc { box-sizing: border-box; position: absolute; width: 56px; height: 86px; border-radius: 8px; border: 3px solid #fffaf0; background: var(--cc, #999); box-shadow: 0 0 0 1px #151515, 0 2px 4px rgba(0,0,0,.35); color: #fff; overflow: hidden; }
+.bc { box-sizing: border-box; position: absolute; width: var(--cw, 56px); height: var(--ch, 86px); border-radius: 8px; border: 3px solid #fffaf0; background: var(--cc, #999); box-shadow: 0 0 0 1px #151515, 0 2px 4px rgba(0,0,0,.35); color: #fff; overflow: hidden; }
 .bc.inhand { position: relative; }
 .bc b { position: absolute; left: 0; right: 0; top: 3px; text-align: center; font-size: 22px; line-height: 26px; font-weight: 800; text-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .bsw, .bxx { position: absolute; top: 3px; display: flex; flex-direction: column; gap: 1px; }
@@ -274,3 +274,8 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .bscore td:last-child { text-align: right; font-weight: 800; }
 .bscore .tot td { border-top: 2px solid var(--forest); font-size: 16px; }
 .bnote { font-size: 13px; color: var(--dim); margin: 8px 4px 0; }
+.brow.one { flex-wrap: nowrap; gap: 4px; }
+.brow.one .bc { --cw: 46px; --ch: 71px; }
+.brow.one .bc b { font-size: 18px; line-height: 22px; }
+.brow.one .bsw svg, .brow.one .bxx svg { width: 9px; height: 9px; }
+.brow.one .pf figcaption { font-size: 10px; max-width: 46px; }
