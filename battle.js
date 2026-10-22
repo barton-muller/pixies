@@ -27,25 +27,37 @@ const BATTLE = (() => {
 
   /* ---------- static boards ---------- */
 
-  function board(c1 = {}, c2 = {}) {
-    const cell = (c, n) => `<div class="mc">${c[n] || n}</div>`;
+  // Card-like final board. Cell data: [colour (g|b|y|r|d = face down), swirls, crosses, finished (0 = no), booster swirls]
+  const G1 = [["g", 2], ["b", 1], ["y"], ["g", 3, 0, 1, 1], ["b", 0, 1, 0], ["b"], ["y"], ["b", 1], ["d"]];
+  const G2 = [["y"], ["g", 1], ["r", 0, 1], ["b", 2], ["d"], ["r"], ["g", 0, 0, 0], ["d"], ["r"]];
+
+  function miniCell(n, e, details, hi) {
+    const cx = 25, cy = 35, put = (spec, o, x, y, rot = 0, down = false) =>
+      cardHtml("", spec, { cls: "mini", rot, down, style: `left:${x - 16}px;top:${y - 25}px;${rot ? `transform:rotate(${rot}deg);` : ""}${o || ""}` });
+    let cards = "";
+    if (e) {
+      const [c, sw = 0, x = 0, fin, bo = 0] = e;
+      const top = { n, c, sw: details ? sw : 0, x: details ? x : 0 };
+      if (c === "d") cards = put({ c: "g" }, "", cx, cy, 0, true);
+      else if (fin !== 0) {
+        if (bo && details) cards += put({ n: 2, c, sw: bo }, "z-index:0;", cx, cy - 15);
+        for (let i = 0; i < 3; i++) cards += put(i === 2 ? top : { n, c }, `z-index:${i + 1};`, cx + (i - 1) * 2, cy + (1 - i) * 2, -90);
+      } else {
+        cards += put({ n, c }, "z-index:1;", cx, cy - 6);
+        cards += put(top, "z-index:2;", cx, cy + 2);
+      }
+    }
+    return `<div class="mcell${hi ? " hi" : ""}"><span class="mn">${n}</span>${cards}</div>`;
+  }
+
+  function miniBoard(d1, d2, details = false, hi1 = [], hi2 = []) {
     let cells = "";
     for (let r = 0; r < 3; r++) {
-      for (let k = 1; k <= 3; k++) cells += cell(c1, r * 3 + k);
-      for (let k = 1; k <= 3; k++) cells += cell(c2, r * 3 + k);
+      for (let k = 0; k < 3; k++) cells += miniCell(r * 3 + k + 1, d1 && d1[r * 3 + k], details, hi1.includes(r * 3 + k + 1));
+      for (let k = 0; k < 3; k++) cells += miniCell(r * 3 + k + 1, d2 && d2[r * 3 + k], details, hi2.includes(r * 3 + k + 1));
     }
     return `<div class="mb"><div class="mbt"><span>Grid 1</span><span>Grid 2</span></div><div class="mbg">${cells}</div></div>`;
   }
-
-  function tile(n, o = {}) {
-    const mid = `${o.sw ? `<em>${SW}${o.sw}</em>` : ""}${o.x ? `<em>${XX}${o.x}</em>` : ""}`;
-    return `<div class="mt c-${o.c}${o.fin === false ? " unf" : ""}${o.hi ? " hi" : ""}"><small>${n}</small>${mid}</div>`;
-  }
-
-  const G1 = [["g", 2], ["b", 1], ["y"], ["g", "3+1"], ["b", 0, 1, 0], ["b"], ["y"], ["b", 1], ["d", 0, 0, 0]];
-  const G2 = [["y"], ["g", 1], ["r", 0, 1], ["b", 2], ["d", 0, 0, 0], ["r"], ["g", 0, 0, 0], ["d", 0, 0, 0], ["r"]];
-  const boardOf = (G, details, hi) =>
-    Object.fromEntries(G.map(([c, sw, x, fin], k) => [k + 1, tile(k + 1, { c, sw: details ? sw : 0, x: details ? x : 0, fin: fin !== 0, hi: hi.includes(k + 1) })]));
 
   /* ---------- animated scenes ---------- */
 
@@ -127,7 +139,7 @@ const BATTLE = (() => {
     {
       t: "The idea",
       p: "Two players share <b>two 3×3 grids placed side by side</b>, one board of 18 cells. Every cell is a pile. A pile is finished at three cards: turn the whole pile sideways and square it up. Whoever's card is on top wins it. The game ends as soon as all 18 cells hold at least one card; a single card per cell is enough.",
-      static: () => row(board()),
+      static: () => row(miniBoard()),
     },
     {
       t: "Your deck",
@@ -145,15 +157,6 @@ const BATTLE = (() => {
         ...[{ n: 5, c: "b" }, { n: 1, c: "g", sw: 3 }].map((c) => scard(c, "left over"))),
     },
     {
-      t: "The number is the cell",
-      p: "A card goes onto the cell that matches its number. You choose the left or right grid. Cards you play always start above the grid, and the dashed outlines are the cells.",
-      cards: { a: { n: 5, c: "g", sw: 1 } },
-      stages: [
-        { who: "A plays", hand: ["a"], fields: [S("Grid 1", ROW), S("Grid 2", ROW)], cap: "A green 5 belongs on cell 5. Grid 1 or grid 2?" },
-        { hand: [], fields: [S("Grid 1", ROW), S("Grid 2", ROW, { 5: ["a"] })], cap: "A chooses grid 2." },
-      ],
-    },
-    {
       t: "Card value",
       p: "A card's value is its <b>swirls</b>, or minus its <b>crosses</b>. A card never has both. The value decides whether it may cover an opponent's card.",
       static: () => row(
@@ -163,11 +166,11 @@ const BATTLE = (() => {
     },
     {
       t: "A first card",
-      p: "Live play starts here and carries on for the next two steps. Two green cards of A's are already on cells 4 and 6. An empty cell takes any card with the right number: B opens cell 5 with a yellow 5, one swirl, value 1.",
+      p: "A card goes onto the cell that matches its number, in either grid. Cards you play start above the grid; the dashed outlines are the cells. Live play starts here and carries on for the next two steps. Two green cards of A's are already on cells 4 and 6 of grid 1. B opens cell 5 with a yellow 5: one swirl, value 1.",
       cards: LIVE,
       stages: [
-        { who: "B plays", hand: ["y"], fields: [S("Grid 1", ROW, { 4: ["g4"], 6: ["g6"] })], cap: "Cell 5 is empty." },
-        { hand: [], vals: { y: 1 }, fields: [S("Grid 1", ROW, { 4: ["g4"], 5: ["y"], 6: ["g6"] })], cap: "B's yellow 5 sits on cell 5, value 1." },
+        { who: "B plays", hand: ["y"], fields: [S("Grid 1", ROW, { 4: ["g4"], 6: ["g6"] }), S("Grid 2", ROW)], cap: "A yellow 5 belongs on cell 5. Grid 1 or grid 2?" },
+        { hand: [], vals: { y: 1 }, fields: [S("Grid 1", ROW, { 4: ["g4"], 5: ["y"], 6: ["g6"] }), S("Grid 2", ROW)], cap: "B chooses grid 1: the yellow 5 takes the empty cell 5, value 1." },
       ],
     },
     {
@@ -243,12 +246,12 @@ const BATTLE = (() => {
     {
       t: "End of the game",
       p: "As soon as every cell has at least one card, the game is over. A single card per cell is enough, nothing has to be finished. Finished piles (three cards) are sideways and score their cell number. Unfinished piles still count for swirls, crosses and colour regions on top.",
-      static: () => row(board(boardOf(G1, false, []), boardOf(G2, false, []))),
+      static: () => row(miniBoard(G1, G2)),
     },
     {
       t: "Scoring",
       p: "Score the whole board, both grids together. Here A holds the blue and green tiles. Dashed tiles are unfinished and card backs are face-down cards, worth nothing on top. Colour regions run across the gap between the grids.",
-      static: () => `${row(board(boardOf(G1, true, [2, 5, 6, 8]), boardOf(G2, true, [4])))}
+      static: () => `${row(miniBoard(G1, G2, true, [2, 5, 6, 8], [4]))}
       <table class="bscore">
         <tr><td>Finished piles on top: grid 1 (1+2+4+6+8) and grid 2 (2+4)</td><td>27</td></tr>
         <tr><td>Biggest colour region: blue, 5 cells across both grids × 3</td><td>15</td></tr>
