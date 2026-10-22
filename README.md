@@ -20,7 +20,7 @@ Pixie bonus points are included in saved totals when the toggle was on, so avera
 
 ## Pix your battles
 
-The Battles tab is a step-through visual explainer for a two-player house variant: shared 3×3 grids, piles won by the top card, boosters, jokers and face-down cards, ending with a worked scoring example that uses the Round 2 block of the score pad. The content lives in `battle.js`.
+The Battles tab is an animated step-by-step tutorial (with one tap-to-answer step) for a two-player house variant: shared 3×3 grids, piles won by the top card, boosters, jokers and face-down cards, ending with a worked scoring example that uses the Round 2 block of the score pad. The content lives in `battle.js`.
 
 ## Data and sync
 
