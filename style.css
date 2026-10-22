@@ -239,8 +239,10 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 
 .mg { text-align: center; }
 .mgt { font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; }
-.mgg { display: grid; grid-template-columns: repeat(3, 52px); gap: 4px; }
-.mc { height: 52px; border: 2px dashed #b9ae94; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #b9ae94; font-size: 18px; }
+.mb { text-align: center; }
+.mbt { display: grid; grid-template-columns: 1fr 1fr; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; }
+.mbg { display: grid; grid-template-columns: repeat(6, 46px); gap: 4px; justify-content: center; }
+.mc { height: 46px; border: 2px dashed #b9ae94; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #b9ae94; font-size: 18px; }
 .mc.hi { border-color: var(--pink); color: var(--pink); background: #fdeef7; }
 .mc:has(.mt), .mc:has(.dn) { border: 0; padding: 0; }
 .dn { width: 100%; height: 100%; border-radius: 8px; background: linear-gradient(135deg, #c76a2b, #8f2f2a 45%, #6b8e3a 72%, #3d86b8); }

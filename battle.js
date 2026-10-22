@@ -38,10 +38,19 @@ const BATTLE = (() => {
   const arrow = (t = "→") => `<div class="arr">${t}</div>`;
   const row = (...x) => `<div class="brow">${x.join("")}</div>`;
 
-  function grid(title, cells = {}, hi = []) {
-    return `<div class="mg"><div class="mgt">${title}</div><div class="mgg">${[1, 2, 3, 4, 5, 6, 7, 8, 9]
-      .map((n) => `<div class="mc${hi.includes(n) ? " hi" : ""}">${cells[n] || n}</div>`).join("")}</div></div>`;
+  function board(c1 = {}, c2 = {}, hi1 = [], hi2 = []) {
+    const cell = (c, n, hi) => `<div class="mc${hi.includes(n) ? " hi" : ""}">${c[n] || n}</div>`;
+    let cells = "";
+    for (let r = 0; r < 3; r++) {
+      for (let k = 1; k <= 3; k++) cells += cell(c1, r * 3 + k, hi1);
+      for (let k = 1; k <= 3; k++) cells += cell(c2, r * 3 + k, hi2);
+    }
+    return `<div class="mb"><div class="mbt"><span>Grid 1</span><span>Grid 2</span></div><div class="mbg">${cells}</div></div>`;
   }
+
+  const G1 = [["g", 2, 0], ["b", 1, 0], ["y"], ["g", "3+1", 0], ["b", 0, 1, 0], ["b"], ["y"], ["b", 1], ["r", 0, 0, 0]];
+  const G2 = [["y"], ["g", 1], ["r", 0, 1], ["b", 2], ["y", 0, 0, 0], ["r"], ["g", 0, 0, 0], ["y"], ["r"]];
+  const boardOf = (G, details, hi) => Object.fromEntries(G.map(([c, sw, x, fin], k) => [k + 1, tile(k + 1, { c, sw: details ? sw : 0, x: details ? x : 0, fin: fin !== 0, hi: hi.includes(k + 1) })]));
 
   function tile(n, o = {}) {
     const mid = `${o.sw ? `<em>${SW}${o.sw}</em>` : ""}${o.x ? `<em>${XX}${o.x}</em>` : ""}`;
@@ -51,8 +60,8 @@ const BATTLE = (() => {
   const steps = [
     {
       t: "The idea",
-      p: "Two players share <b>two 3×3 grids</b>. Every cell is a pile. Three cards finish a pile, and whoever's card is on top wins it. The game ends as soon as all 18 cells hold at least one card. A single card per cell is enough; no stack has to be finished.",
-      s: () => row(grid("Grid 1"), grid("Grid 2")),
+      p: "Two players share <b>two 3×3 grids placed side by side</b>, one board of 18 cells. Every cell is a pile. Three cards finish a pile, and whoever's card is on top wins it. The game ends as soon as all 18 cells hold at least one card. A single card per cell is enough; no stack has to be finished.",
+      s: () => row(board()),
     },
     {
       t: "Your deck",
@@ -64,7 +73,7 @@ const BATTLE = (() => {
     },
     {
       t: "Rounds and hands",
-      p: "Draw up to six cards, then take turns playing <b>four</b> of them. Playing two cards at once (booster or joker) uses <b>two</b> of your four plays. Once you have made your four plays, your opponent keeps taking consecutive turns until they have made theirs. Before the next round, each of your two leftovers goes either to the bottom of your deck or stays in your hand.",
+      p: "Draw up to six cards, then take turns playing <b>four</b> of them. Playing two cards at once (booster or joker) uses <b>two</b> of your four plays. Once you have made your four plays, your opponent keeps taking consecutive turns until they have made theirs. Before the next round, each of your two leftovers goes either to the bottom of your deck or stays in your hand. Most cards end up stacked on others, so a game usually takes many rounds.",
       s: () => row(
         ...[{ n: 2, c: "g" }, { n: 6, c: "b", sw: 2 }, { n: 9, c: "g", x: 1 }, { n: 4, c: "b", sw: 1 }].map((c) => single(c, "play")),
         ...[{ n: 5, c: "b" }, { n: 1, c: "g", sw: 3 }].map((c) => single(c, "left over"))),
@@ -72,7 +81,7 @@ const BATTLE = (() => {
     {
       t: "The number is the cell",
       p: "A card goes onto the cell that matches its number. You choose the left or right grid.",
-      s: () => row(single({ n: 5, c: "g", sw: 1 }), arrow(), grid("Grid 1", {}, [5]), grid("Grid 2", {}, [5])),
+      s: () => row(single({ n: 5, c: "g", sw: 1 }), arrow(), board({}, {}, [5], [5])),
     },
     {
       t: "Card value",
@@ -125,7 +134,7 @@ const BATTLE = (() => {
       s: () => row(
         single({ n: 9, c: "g", x: 1 }, "no legal play"),
         arrow(),
-        grid("Grid 2", { 2: `<div class="dn"></div>`, 4: `<div class="dn"></div>`, 8: `<div class="dn"></div>` })),
+        board({}, { 2: `<div class="dn"></div>`, 4: `<div class="dn"></div>`, 8: `<div class="dn"></div>` })),
     },
     {
       t: "Jokers: finishing a pile",
@@ -158,30 +167,20 @@ const BATTLE = (() => {
     {
       t: "End of the game",
       p: "As soon as every cell has at least one card, the game is over. A single card per cell is enough, nothing has to be finished. Finished piles (three cards) are sideways and score their cell number. Unfinished piles still count for swirls, crosses and colour regions on top.",
-      s: () => row(grid("Grid 1", Object.fromEntries(["g", "b", "y", "g", "b", "r", "y", "b", "r"].map((c, k) => [k + 1, tile(k + 1, { c, fin: k !== 4 && k !== 8 })])))),
+      s: () => row(board(boardOf(G1, false, []), boardOf(G2, false, []))),
     },
     {
       t: "Scoring",
-      p: "Count each grid, then add. Here A holds the blue and green tiles on this grid. Dashed tiles are unfinished.",
-      s: () => `${row(grid("Grid 1", {
-        1: tile(1, { c: "g", sw: 2 }),
-        2: tile(2, { c: "b", sw: 1, hi: 1 }),
-        3: tile(3, { c: "y" }),
-        4: tile(4, { c: "g", sw: "3+1" }),
-        5: tile(5, { c: "b", x: 1, fin: false, hi: 1 }),
-        6: tile(6, { c: "r", x: 1 }),
-        7: tile(7, { c: "y" }),
-        8: tile(8, { c: "b", sw: 1, hi: 1 }),
-        9: tile(9, { c: "r", fin: false }),
-      }))}
+      p: "Score the whole board, both grids together. Here A holds the blue and green tiles. Dashed tiles are unfinished. Colour regions run across the gap between the grids.",
+      s: () => `${row(board(boardOf(G1, true, [2, 5, 6, 8]), boardOf(G2, true, [4])))}
       <table class="bscore">
-        <tr><td>Finished piles on top (1 + 2 + 4 + 8)</td><td>15</td></tr>
-        <tr><td>Biggest colour region: blue 2-5-8 = 3 × 3</td><td>9</td></tr>
-        <tr><td>Swirls on top, boosters included</td><td>+8</td></tr>
+        <tr><td>Finished piles on top: grid 1 (1+2+4+6+8) and grid 2 (2+4)</td><td>27</td></tr>
+        <tr><td>Biggest colour region: blue, 5 cells across both grids × 3</td><td>15</td></tr>
+        <tr><td>Swirls on top, boosters included</td><td>+11</td></tr>
         <tr><td>Crosses on top</td><td>−1</td></tr>
-        <tr class="tot"><td>A's total</td><td>31</td></tr>
+        <tr class="tot"><td>A's total</td><td>52</td></tr>
       </table>
-      <p class="bnote">Score card: put 15 in <i>full cells</i>, 3 in <i>colour area</i>, 8 in swirls and 1 in crosses, all in the Round 2 block (colour area ×3). Pixies count +1 each if you play that rule.</p>`,
+      <p class="bnote">Score card: put 27 in <i>full cells</i>, 5 in <i>colour area</i>, 11 in swirls and 1 in crosses, all in the Round 2 block (colour area ×3). Pixies count +1 each if you play that rule.</p>`,
     },
   ];
 
