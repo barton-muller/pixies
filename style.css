@@ -255,3 +255,4 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .bscore td:last-child { text-align: right; font-weight: 800; }
 .bscore .tot td { border-top: 2px solid var(--forest); font-size: 16px; }
 .bnote { font-size: 13px; color: var(--dim); margin: 8px 4px 0; }
+.bsep { height: 1px; background: #d9cfb4; margin: 14px 10px; }

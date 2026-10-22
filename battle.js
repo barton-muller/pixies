@@ -128,15 +128,32 @@ const BATTLE = (() => {
         grid("Grid 2", { 2: `<div class="dn"></div>`, 4: `<div class="dn"></div>`, 8: `<div class="dn"></div>` })),
     },
     {
-      t: "Jokers",
-      p: "A joker goes down together with a card of the same number underneath, so it counts as <b>two cards</b> and uses two of your four plays. That only works on a pile with exactly one card, which makes three. You may then reorder the pile to put your card on top, even though it is worth less.",
+      t: "Jokers: finishing a pile",
+      p: "A joker is never the top card; it always sits inside the pile. Played alone (one play) on a pile of <b>two</b>, it makes three: the pile is finished and you may reorder all three cards. Put one of your own cards on top to win it, even if it is worth less. You may play a joker on any pile, even one without a card of yours. On a pile of one it just slides underneath, which is worth little.",
+      s: () => `${row(
+        pile([{ n: 7, c: "g" }, { n: 7, c: "y", sw: 2, val: 2 }], "B's 2 is on top"),
+        `<div class="arr">+</div>`,
+        single({ n: 7, c: "j", sw: 1, owner: "A" }, "joker, alone"),
+        arrow(),
+        pile([{ n: 7, c: "y", sw: 2 }, { n: 7, c: "j", sw: 1, owner: "A" }, { n: 7, c: "g", side: 1 }], "reordered: A wins with a 0"))}
+        <div class="bsep"></div>
+        ${row(
+          pile([{ n: 3, c: "y", sw: 1, val: 1 }], "a pile of one"),
+          `<div class="arr">+</div>`,
+          single({ n: 3, c: "j", owner: "A" }, "joker"),
+          arrow(),
+          pile([{ n: 3, c: "j", owner: "A" }, { n: 3, c: "y", sw: 1 }], "underneath, no reorder"))}`,
+    },
+    {
+      t: "Jokers: with a partner",
+      p: "A joker can also go down together with a card of the same number: two cards, <b>two plays</b>. On a pile of one that makes three, so the pile is finished and you reorder it, again with a card of yours on top and the joker never on top.",
       s: () => row(
         pile([{ n: 7, c: "y", sw: 2, val: 2 }], "B's 2 is on top"),
-        single({ n: 7, c: "g" }, "under"),
+        single({ n: 7, c: "g" }, "partner"),
         `<div class="arr">+</div>`,
-        single({ n: 7, c: "j", sw: 1, val: 1, owner: "A" }, "joker"),
+        single({ n: 7, c: "j", sw: 1, owner: "A" }, "joker"),
         arrow(),
-        pile([{ n: 7, c: "y", sw: 2 }, { n: 7, c: "g" }, { n: 7, c: "j", sw: 1, owner: "A", side: 1 }], "A wins cell 7 with a 1")),
+        pile([{ n: 7, c: "y", sw: 2 }, { n: 7, c: "j", sw: 1, owner: "A" }, { n: 7, c: "g", side: 1 }], "A wins cell 7 with a 0")),
     },
     {
       t: "End of the game",
