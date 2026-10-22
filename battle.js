@@ -51,7 +51,7 @@ const BATTLE = (() => {
   const steps = [
     {
       t: "The idea",
-      p: "Two players share <b>two 3×3 grids</b>. Every cell is a pile. Three cards finish a pile, and whoever's card is on top wins it. The game ends when all 18 cells hold at least one card.",
+      p: "Two players share <b>two 3×3 grids</b>. Every cell is a pile. Three cards finish a pile, and whoever's card is on top wins it. The game ends as soon as all 18 cells hold at least one card. A single card per cell is enough; no stack has to be finished.",
       s: () => row(grid("Grid 1"), grid("Grid 2")),
     },
     {
@@ -64,7 +64,7 @@ const BATTLE = (() => {
     },
     {
       t: "Rounds and hands",
-      p: "Draw up to six cards, then take turns playing <b>four</b> of them. A card plus its booster or joker partner counts as one play. Before the next round, each of your two leftovers goes either to the bottom of your deck or stays in your hand.",
+      p: "Draw up to six cards, then take turns playing <b>four</b> of them. Playing two cards at once (booster or joker) uses <b>two</b> of your four plays. Once you have made your four plays, your opponent keeps taking consecutive turns until they have made theirs. Before the next round, each of your two leftovers goes either to the bottom of your deck or stays in your hand.",
       s: () => row(
         ...[{ n: 2, c: "g" }, { n: 6, c: "b", sw: 2 }, { n: 9, c: "g", x: 1 }, { n: 4, c: "b", sw: 1 }].map((c) => single(c, "play")),
         ...[{ n: 5, c: "b" }, { n: 1, c: "g", sw: 3 }].map((c) => single(c, "left over"))),
@@ -105,7 +105,7 @@ const BATTLE = (() => {
     },
     {
       t: "Boosters",
-      p: "Play two cards of the same colour at once and put the second behind the first, turned sideways so its swirls show. Their values add up but they count as <b>one card</b> in the pile. Red 4 (1) + red 2 swirls = 3, enough to cover A's 2.",
+      p: "Play two cards of the same colour at once and put the second behind the first, turned sideways so its swirls show. Their values add up but they count as <b>one card</b> in the pile, while using two of your four plays. Red 4 (1) + red 2 swirls = 3, enough to cover A's 2.",
       s: () => row(
         pile([{ n: 4, c: "y", sw: 1 }, { n: 4, c: "g", sw: 2, val: 2 }], "B to move"),
         single({ n: 4, c: "r", sw: 1 }, "card"),
@@ -129,7 +129,7 @@ const BATTLE = (() => {
     },
     {
       t: "Jokers",
-      p: "A joker goes down together with a card of the same number underneath, so it counts as <b>two cards</b>. That only works on a pile with exactly one card, which makes three. You may then reorder the pile to put your card on top, even though it is worth less.",
+      p: "A joker goes down together with a card of the same number underneath, so it counts as <b>two cards</b> and uses two of your four plays. That only works on a pile with exactly one card, which makes three. You may then reorder the pile to put your card on top, even though it is worth less.",
       s: () => row(
         pile([{ n: 7, c: "y", sw: 2, val: 2 }], "B's 2 is on top"),
         single({ n: 7, c: "g" }, "under"),
@@ -140,7 +140,7 @@ const BATTLE = (() => {
     },
     {
       t: "End of the game",
-      p: "When every cell has at least one card, the game is over. Finished piles are sideways, unfinished ones still count for swirls and crosses on top.",
+      p: "As soon as every cell has at least one card, the game is over. A single card per cell is enough, nothing has to be finished. Finished piles (three cards) are sideways and score their cell number. Unfinished piles still count for swirls, crosses and colour regions on top.",
       s: () => row(grid("Grid 1", Object.fromEntries(["g", "b", "y", "g", "b", "r", "y", "b", "r"].map((c, k) => [k + 1, tile(k + 1, { c, fin: k !== 4 && k !== 8 })])))),
     },
     {
