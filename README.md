@@ -22,6 +22,23 @@ Pixie bonus points are included in saved totals when the toggle was on, so avera
 
 The Battles tab is an animated step-by-step tutorial (with one tap-to-answer step) for a two-player house variant: shared 3×3 grids, piles won by the top card, boosters, jokers and face-down cards, ending with a worked scoring example that uses the Round 2 block of the score pad. The content lives in `battle.js`.
 
+## Practice bot
+
+`bot/engine.js` implements the Battles house variant (legal moves, covering, boosters, jokers, face-down cards, rounds, scoring); `bot/bot.js` has the opponents. Both run in Node and the browser; nothing is wired into the UI yet.
+
+| spec | behaviour |
+| --- | --- |
+| `random` | uniform over legal moves |
+| `greedy[:eps]` | one-ply score-differential maximiser, random move with probability `eps` |
+| `pimc:N` | N sampled opponent hands, one-round playouts per candidate move |
+
+```sh
+node tools/test_engine.js
+node tools/selfplay.js --games 300 --a pimc:40 --b greedy
+```
+
+The deck composition (`DEFAULTS` in `engine.js`) is a placeholder.
+
 ## Data and sync
 
 Everything lives in `localStorage` (`pixies.*` keys), per browser. Clearing site data erases it unless sync is on.
@@ -51,7 +68,8 @@ app.js       state, scoring, views, stats
 sync.js      gist sync and merge logic
 battle.js    rules explainer for the house variant
 config.js    sync settings, written by tools/setup_sync.py
-tools/       setup_sync.py
+bot/         variant engine and bots
+tools/       setup_sync.py, selfplay.js, test_engine.js
 img/         logo, cover, moss background, avatars, icons
 ```
 
