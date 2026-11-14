@@ -118,6 +118,7 @@ const PRACTICE = (() => {
   function apply(m) {
     const c = s.reveal.find((x) => x.id === m.id);
     if (s.turn === YOU) hist.push(JSON.stringify({ s, summary, log, rec }));
+    const flight = lift(m.id);
     log = describe(c, m);
     const rounds = s.roundScores.length;
     E.step(s, m);
@@ -136,6 +137,7 @@ const PRACTICE = (() => {
     }
     persist();
     render();
+    land(flight, m.id);
     maybeBot();
   }
 
@@ -173,8 +175,43 @@ const PRACTICE = (() => {
 
   /* ---------- rendering ---------- */
 
+  const reduced = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const flying = new Set();
+
+  function lift(id) {
+    const el = document.querySelector(`.prev .pc[data-id="${id}"]`);
+    if (!el || reduced()) return null;
+    const r = el.getBoundingClientRect(), ghost = el.cloneNode(true);
+    ghost.classList.add("ghost");
+    Object.assign(ghost.style, { position: "fixed", left: `${r.left}px`, top: `${r.top}px`, margin: "0", transformOrigin: "0 0" });
+    ghost.style.setProperty("--cw", `${r.width}px`);
+    ghost.style.setProperty("--ch", `${r.height}px`);
+    document.body.appendChild(ghost);
+    return { ghost, r };
+  }
+
+  const board = (id) => document.querySelector(`.parea [data-id="${id}"]`);
+
+  function land(l, id) {
+    if (!l) return;
+    const target = board(id);
+    if (!target) return l.ghost.remove();
+    flying.add(id);
+    target.style.visibility = "hidden";
+    const t = target.getBoundingClientRect();
+    const a = l.ghost.animate(
+      [{ transform: "none" }, { transform: `translate(${t.left - l.r.left}px, ${t.top - l.r.top}px) scale(${t.width / l.r.width})` }],
+      { duration: 420, easing: "cubic-bezier(.25,.8,.25,1)", fill: "forwards" });
+    a.onfinish = a.oncancel = () => {
+      flying.delete(id);
+      const now = board(id);
+      if (now) now.style.visibility = "";
+      l.ghost.remove();
+    };
+  }
+
   function card(c, o = {}) {
-    if (o.down) return `<div class="pc down ${o.cls || ""}"></div>`;
+    if (o.down) return `<div class="pc down ${o.cls || ""}" data-id="${c.id}"></div>`;
     const two = (n) => (n >= 4 ? " two" : "");
     const sp = c.sp ? `<span class="psp">${SW}<i>/</i><u class="c-${c.sp}"></u></span>` : "";
     const dots = c.c === "m" ? '<span class="pcol"><s class="c-b"></s><s class="c-g"></s><s class="c-y"></s><s class="c-r"></s></span>' : "";
@@ -291,6 +328,7 @@ const PRACTICE = (() => {
     const el = document.getElementById("view-practice");
     el.innerHTML = !s ? setupHtml() : summary ? summaryHtml() : gameHtml();
     document.body.classList.toggle("pplay", !!s && !el.hidden);
+    flying.forEach((id) => { const t = board(id); if (t) t.style.visibility = "hidden"; });
     warn = "";
     const on = (q, fn) => el.querySelectorAll(q).forEach((b) => b.addEventListener("click", () => fn(b)));
     on("[data-level]", (b) => { level = b.dataset.level; persist(); render(); });
