@@ -395,3 +395,9 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .pside .pico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .pside .pico:active:not(:disabled) { background: #e6dcc3; }
 .pside .pico:disabled { opacity: .35; cursor: default; }
+
+/* practice: card panel spans the bot column */
+.ptop { align-items: stretch; }
+.pgame .ptop .pturn { display: flex; flex-direction: column; }
+.pgame .ptop .pturn > .preveal, .pgame .ptop .pturn > .pchoice { margin: auto 0; }
+.pgame .ptop .pturn > .pside { margin-top: 0; }
