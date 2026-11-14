@@ -24,20 +24,22 @@ The Battles tab is an animated step-by-step tutorial (with one tap-to-answer ste
 
 ## Practice bot
 
-`bot/engine.js` implements the Battles house variant (legal moves, covering, boosters, jokers, face-down cards, rounds, scoring); `bot/bot.js` has the opponents. Both run in Node and the browser; nothing is wired into the UI yet.
+`bot/engine.js` implements the base game for two players (not the Battles house variant): public 4-card reveals, alternating picks, the three placement cases, round end, three rounds, and scoring (validated cards, spirals/crosses, specials, largest colour zone ×2/×3/×4). `bot/deck.js` is the 70-card deck transcribed from photos. `bot/bot.js` has the opponents. Both run in Node and the browser; nothing is wired into the UI yet.
 
 | spec | behaviour |
 | --- | --- |
-| `random` | uniform over legal moves |
-| `greedy[:eps]` | one-ply score-differential maximiser, random move with probability `eps` |
-| `pimc:N` | N sampled opponent hands, one-round playouts per candidate move |
+| `random` | uniform over legal picks and placements |
+| `greedy[:eps]` | maximises own score gain plus half the gain it denies the opponent, random pick with probability `eps` |
+| `mc:N` | N sampled draw orders, one greedy playout to the end of the round per candidate move |
+
+The only hidden information is the draw order, so `mc` resamples the unseen cards and never reads the real deck order.
 
 ```sh
 node tools/test_engine.js
-node tools/selfplay.js --games 300 --a pimc:40 --b greedy
+node tools/selfplay.js --games 200 --a mc:30 --b greedy
 ```
 
-The deck composition (`DEFAULTS` in `engine.js`) is a placeholder.
+Rule interpretation: in a 2-player round, once a player's area is full the round ends as soon as both players have placed the same number of cards. A card that must go facedown with no empty space is discarded.
 
 ## Data and sync
 
@@ -68,7 +70,7 @@ app.js       state, scoring, views, stats
 sync.js      gist sync and merge logic
 battle.js    rules explainer for the house variant
 config.js    sync settings, written by tools/setup_sync.py
-bot/         variant engine and bots
+bot/         base-game engine, deck and bots
 tools/       setup_sync.py, selfplay.js, test_engine.js
 img/         logo, cover, moss background, avatars, icons
 ```

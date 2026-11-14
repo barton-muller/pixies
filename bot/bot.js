@@ -2,79 +2,48 @@
 
 const PIXBOT = (() => {
   const E = typeof module !== "undefined" ? require("./engine.js") : PIXIES;
-  const COMPACT = { compactDown: true };
+  const DENY = 0.5, ROLLOUT_EPS = 0.15;
 
-  const evaluate = (s, p) => {
-    let own = 0;
-    for (const pl of s.piles) {
-      const t = pl[pl.length - 1];
-      if (t && !t.down) own += t.card.owner === p ? 1 : -1;
-    }
-    return E.score(s, p).total - E.score(s, 1 - p).total + 0.2 * own;
-  };
+  const randomMove = (moves, r) => moves[Math.floor(r() * moves.length)];
 
-  const keepValue = (c) => (c.c === "j" ? 3 : c.sp ? 2 : c.sw - c.x) - 1;
-
-  function chooseKeep(s, moves) {
-    const byId = new Map(s.hands[s.turn].map((c) => [c.id, c]));
+  function greedy(s, r, eps = 0) {
+    const moves = E.legalMoves(s);
+    if (moves.length === 1) return moves[0];
+    if (eps && r() < eps) return randomMove(moves, r);
+    const p = s.turn, q = 1 - p, base = E.score(s, p).total, qBase = E.score(s, q).total, deny = new Map();
     let best = moves[0], bv = -Infinity;
     for (const m of moves) {
-      const v = m.ids.reduce((a, id) => a + keepValue(byId.get(id)), 0);
+      const c = s.reveal.find((x) => x.id === m.id);
+      if (!deny.has(c.k)) deny.set(c.k, Math.max(0, ...E.placements(s, q, c).map((pl) => E.scoreAfter(s, q, c, pl) - qBase)));
+      const tie = m.kind === 3 && m.opt >= 0 ? 0.01 * s.numCount[m.opt] : 0;
+      const v = E.scoreAfter(s, p, c, m) - base + DENY * deny.get(c.k) + tie + r() * 1e-6;
       if (v > bv) { bv = v; best = m; }
     }
     return best;
   }
 
-  function greedyPick(s, moves, r) {
-    const p = s.turn;
-    let best = moves[0], bv = -Infinity;
-    for (const m of moves) {
-      const v = evaluate(E.apply(s, m), p) + r() * 1e-6;
-      if (v > bv) { bv = v; best = m; }
+  function determinize(s, r) {
+    const d = E.clone(s), seen = new Set(s.reveal.map((c) => c.id));
+    for (let p = 0; p < 2; p++) for (let i = 0; i < 9; i++) {
+      if (s.up[p][i]) seen.add(s.up[p][i].id);
+      if (s.down[p][i]) seen.add(s.down[p][i].id);
     }
-    return best;
-  }
-
-  const randomPick = (moves, r) => moves[Math.floor(r() * moves.length)];
-
-  function sampled(s, moves, r, k) {
-    const p = s.turn;
-    let best = null, bv = -Infinity;
-    for (let i = 0; i < k; i++) {
-      const m = randomPick(moves, r), v = evaluate(E.apply(s, m), p);
-      if (v > bv) { bv = v; best = m; }
-    }
-    return best;
-  }
-
-  function determinize(s, p, r) {
-    const d = E.clone(s), o = 1 - p;
-    const seen = [new Set(), new Set()];
-    let hidden = 0;
-    for (const pl of d.piles) for (const e of pl) {
-      if (e.down && e.card.owner === o) { hidden++; continue; }
-      seen[e.card.owner].add(e.card.id);
-      if (e.boost) seen[e.boost.owner].add(e.boost.id);
-    }
-    const mine = new Set(s.hands[p].map((c) => c.id));
-    d.decks[p] = E.shuffle(s.cards[p].filter((c) => !seen[p].has(c.id) && !mine.has(c.id)), r);
-    const pool = E.shuffle(s.cards[o].filter((c) => !seen[o].has(c.id)), r).slice(hidden);
-    const k = s.hands[o].length;
-    d.hands[o] = pool.slice(0, k);
-    d.decks[o] = pool.slice(k);
+    d.draw = E.shuffle(s.pool.filter((c) => !seen.has(c.id)), r);
     return d;
   }
 
-  function playout(s, r) {
-    while (!s.over && s.phase === "play") E.step(s, sampled(s, E.legalMoves(s, COMPACT), r, 3));
-    return s;
-  }
-
-  function pimcPick(s, moves, r, samples) {
-    const p = s.turn, tot = new Float64Array(moves.length), base = Math.floor(r() * 2 ** 30);
-    for (let i = 0; i < samples; i++) {
-      const det = determinize(s, p, r);
-      moves.forEach((m, j) => { tot[j] += evaluate(playout(E.apply(det, m), E.rng(base + i)), p); });
+  function monteCarlo(s, r, n) {
+    const moves = E.legalMoves(s);
+    if (moves.length === 1) return moves[0];
+    const p = s.turn, round = s.round, tot = new Float64Array(moves.length);
+    for (let i = 0; i < n; i++) {
+      const det = determinize(s, r);
+      moves.forEach((m, j) => {
+        const t = E.apply(det, m);
+        while (!t.over && t.round === round) E.step(t, greedy(t, r, ROLLOUT_EPS));
+        const rs = t.roundScores[round - 1];
+        tot[j] += rs[p] - rs[1 - p];
+      });
     }
     let bj = 0;
     for (let j = 1; j < moves.length; j++) if (tot[j] > tot[bj]) bj = j;
@@ -83,23 +52,16 @@ const PIXBOT = (() => {
 
   function make(spec) {
     const [kind, arg] = spec.split(":"), n = arg === undefined ? undefined : +arg;
-    const policy = {
-      random: (s, moves, r) => randomPick(moves, r),
-      greedy: (s, moves, r) => (r() < (n || 0) ? randomPick(moves, r) : greedyPick(s, moves, r)),
-      pimc: (s, moves, r) => (moves.length === 1 ? moves[0] : pimcPick(s, moves, r, n || 16)),
+    const choose = {
+      random: (s, r) => randomMove(E.legalMoves(s), r),
+      greedy: (s, r) => greedy(s, r, n || 0),
+      mc: (s, r) => monteCarlo(s, r, n || 20),
     }[kind];
-    if (!policy) throw new Error(`unknown bot "${spec}"`);
-    return {
-      name: spec,
-      choose(s, r) {
-        const moves = E.legalMoves(s, kind === "random" ? {} : COMPACT);
-        if (s.phase === "keep") return kind === "random" ? randomPick(moves, r) : chooseKeep(s, moves);
-        return moves.length === 1 ? moves[0] : policy(s, moves, r);
-      },
-    };
+    if (!choose) throw new Error(`unknown bot "${spec}"`);
+    return { name: spec, choose };
   }
 
-  return { make, determinize, evaluate };
+  return { make, determinize, greedy };
 })();
 
 if (typeof module !== "undefined") module.exports = PIXBOT;

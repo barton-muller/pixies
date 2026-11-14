@@ -4,101 +4,128 @@
 const assert = require("assert");
 const E = require("../bot/engine.js");
 const B = require("../bot/bot.js");
+const DECK = require("../bot/deck.js");
 
-const card = (id, owner, n, c, o = {}) => ({ id, owner, n, c, sw: 0, x: 0, sp: 0, ...o });
-const own = { b: 0, g: 0, y: 1, r: 1 };
 let nid = 1000;
-const ent = (n, c, sw = 0, x = 0, extra = {}) => ({ card: card(nid++, own[c], n, c, { sw, x }), ...extra });
+const card = (n, c, o = {}) => E.mkCard({ n, c, ...o }, nid++);
 
-function blank() {
+function blank(round = 1) {
   const s = E.newGame(1);
-  s.piles = s.piles.map(() => []);
-  s.hands = [[], []];
-  s.decks = [[], []];
+  s.round = round;
+  s.mult = round + 1;
+  s.up = [Array(9).fill(null), Array(9).fill(null)];
+  s.down = [Array(9).fill(null), Array(9).fill(null)];
+  s.placed = [0, 0];
+  s.reveal = [];
+  s.turn = 0;
+  s.starter = 0;
+  s.pickIdx = 0;
   return s;
 }
 
-// Scoring worked example from the Battles tab (A holds blue + green): expect 52.
+// Deck: counts per number as printed on the cards, 70 cards in total.
 {
-  const s = blank();
-  const fill = (cell, c, n, sw, x, fin, boost) => {
-    const e = ent(n, c, sw, x);
-    if (boost) e.boost = card(nid++, own[c], 2, c, { sw: boost });
-    const pl = [e];
-    if (fin) pl.unshift(ent(n, "y"), ent(n, "y"));
-    s.piles[cell] = pl;
-  };
-  const G1 = [["g", 2], ["b", 1], ["y"], ["g", 3, 0, 1, 1], ["b", 0, 1, 0], ["b"], ["y"], ["b", 1], ["d"]];
-  const G2 = [["y"], ["g", 1], ["r", 0, 1], ["b", 2], ["d"], ["r"], ["g", 0, 0, 0], ["d"], ["r"]];
-  [G1, G2].forEach((G, g) => G.forEach(([c, sw = 0, x = 0, fin, bo = 0], k) => {
-    const cell = g * 9 + k;
-    if (c === "d") s.piles[cell] = [{ card: card(nid++, 1, k + 1, "g"), down: true }];
-    else fill(cell, c, k + 1, sw, x, fin !== 0, bo);
-  }));
-  const a = E.score(s, 0);
-  assert.deepStrictEqual([a.full, a.area, a.sw, a.x, a.total], [27, 5, 11, 1, 52]);
+  const per = Array(9).fill(0);
+  DECK.forEach((c) => per[c.n - 1]++);
+  assert.deepStrictEqual(per, [5, 6, 8, 10, 12, 10, 8, 6, 5]);
+  assert.strictEqual(DECK.length, 70);
+  assert.strictEqual(DECK.filter((c) => c.c === "m").length, 6);
+  assert.strictEqual(DECK.filter((c) => c.sp).length, 8);
+  assert.ok(DECK.every((c) => !(c.sw && c.x) && !(c.sp && (c.sw || c.x))));
 }
 
-// Covering: strict value, own pile free, special counts itself.
+// Rulebook worked example, round 1: 21 + 11 + 8 = 40.
 {
-  const s = blank();
-  s.piles[3] = [ent(4, "g")];
-  s.piles[5] = [ent(6, "g")];
-  s.piles[4] = [ent(5, "y", 1)];
-  s.turn = 0;
-  const blue = card(1, 0, 5, "b", { sw: 1 }), special = card(2, 0, 5, "g", { sp: 1 });
-  s.hands[0] = [blue, special];
-  const plays = E.legalMoves(s).filter((m) => m.t === "play" && m.cell === 4);
-  assert.deepStrictEqual(plays.map((m) => m.id), [2]);
-  const after = E.apply(s, plays[0]);
-  assert.strictEqual(after.piles[4].length, 2);
+  const s = blank(1), up = s.up[0], down = s.down[0], back = () => card(1, "r");
+  up[0] = card(1, "b", { sw: 6 }); down[0] = back();
+  up[1] = card(2, "m");
+  up[2] = card(3, "b", { sw: 3 });
+  up[3] = card(4, "b", { sp: "b" });
+  up[4] = card(5, "g", { x: 1 }); down[4] = back();
+  down[5] = back();
+  up[6] = card(7, "y", { sw: 1 }); down[6] = back();
+  up[7] = card(8, "b", { x: 3 }); down[7] = back();
+  down[8] = back();
+  const sc = E.score(s, 0);
+  assert.deepStrictEqual([sc.val, sc.sym, sc.zone, sc.total], [21, 11, 4, 40]);
+  s.mult = 4;
+  assert.strictEqual(E.score(s, 0).total, 21 + 11 + 16);
 }
 
-// Booster: 2 + 2 beats a 3 special.
+// Placement cases.
 {
-  const s = blank();
-  s.piles[4] = [ent(5, "y", 1), { card: card(77, 0, 5, "g", { sp: 1 }) }];
-  s.piles[3] = [ent(4, "g")];
-  s.piles[5] = [ent(6, "g")];
-  const r5 = card(1, 1, 5, "r", { sw: 2 }), r2 = card(2, 1, 2, "r", { sw: 2 });
-  s.hands[1] = [r5, r2];
-  s.turn = 1;
-  const moves = E.legalMoves(s).filter((m) => m.t === "boost" && m.cell === 4);
-  assert.ok(moves.some((m) => m.id === 1 && m.b === 2));
-  assert.ok(!E.legalMoves(s).some((m) => m.t === "play" && m.cell === 4));
+  const s = blank(), c = card(3, "g");
+  assert.deepStrictEqual(E.placements(s, 0, c), [{ kind: 1, opt: -1 }]);
+  s.down[0][2] = card(9, "r");
+  assert.deepStrictEqual(E.placements(s, 0, c), [{ kind: 1, opt: -1 }]);
+  s.reveal = [c];
+  E.step(s, { id: c.id, kind: 1, opt: -1 });
+  assert.strictEqual(s.up[0][2], c);
+  assert.ok(s.down[0][2], "case 1 on a facedown card validates");
+  assert.strictEqual(E.score(s, 0).val, 3);
+
+  const s2 = blank(), old = card(4, "b"), nw = card(4, "y");
+  s2.up[0][3] = old;
+  assert.deepStrictEqual(E.placements(s2, 0, nw).map((p) => p.kind), [2, 2]);
+  s2.reveal = [nw];
+  E.step(s2, { id: nw.id, kind: 2, opt: 1 });
+  assert.strictEqual(s2.up[0][3], old);
+  assert.strictEqual(s2.down[0][3], nw);
+
+  const s3 = blank();
+  s3.up[0][4] = card(5, "b");
+  s3.down[0][4] = card(8, "b");
+  s3.up[0][0] = card(1, "b");
+  const mv = E.placements(s3, 0, card(5, "g"));
+  assert.ok(mv.every((p) => p.kind === 3));
+  assert.deepStrictEqual(mv.map((p) => p.opt), [1, 2, 3, 5, 6, 7, 8]);
 }
 
-// Joker on a pile of two finishes it and lets the owner pick the top.
+// Zone rules: diagonals do not connect, singletons score nothing, multi is wild.
 {
-  const s = blank();
-  s.piles[1] = [ent(2, "g"), ent(2, "y", 2)];
-  s.hands[0] = [card(9, 0, 2, "j", { sw: 1 })];
-  s.turn = 0;
-  const mv = E.legalMoves(s).filter((m) => m.t === "joker" && m.cell === 1);
-  assert.strictEqual(mv.length, 2);
-  const done = E.apply(s, mv.find((m) => s.piles[1][m.top].card.owner === 0));
-  assert.strictEqual(done.piles[1].length, 3);
-  assert.strictEqual(done.piles[1][2].card.owner, 0);
+  const s = blank(1);
+  s.up[0][0] = card(1, "b");
+  s.up[0][4] = card(5, "b");
+  assert.strictEqual(E.score(s, 0).zone, 0);
+  s.up[0][1] = card(2, "m");
+  assert.strictEqual(E.score(s, 0).zone, 3);
+  s.up[0][8] = card(9, "b");
+  assert.strictEqual(E.score(s, 0).zone, 3);
 }
 
-// Full games: conservation, pile limits, termination, bots stay legal.
+// Two-player round end: filling first player's area ends the round once placements are equal.
 {
-  for (const spec of [["random", "random"], ["greedy", "greedy:0.2"], ["pimc:4", "greedy"]]) {
-    const bots = spec.map(B.make);
-    for (let g = 0; g < 6; g++) {
-      const s = E.newGame(g + 1), r = E.rng(g + 99), total = s.cards[0].length + s.cards[1].length;
-      let guard = 0;
-      while (!s.over) {
-        const m = bots[s.turn].choose(s, r);
-        assert.ok(E.legalMoves(s).some((x) => JSON.stringify(x) === JSON.stringify(m)) || m.t === "keep", "illegal move chosen");
-        E.step(s, m);
-        const n = s.piles.reduce((a, p) => a + p.reduce((b, e) => b + 1 + (e.boost ? 1 : 0), 0), 0)
-          + s.hands.concat(s.decks).reduce((a, h) => a + h.length, 0);
-        assert.strictEqual(n, total, "cards not conserved");
-        assert.ok(s.piles.every((p) => p.length <= 3));
-        assert.ok(++guard < 2000, "no termination");
+  const s = blank(1);
+  for (let i = 0; i < 8; i++) s.down[0][i] = card(1, "r");
+  s.draw = Array.from({ length: 8 }, () => card(9, "r"));
+  const a = card(9, "g"), b = card(9, "y"), c = card(2, "b"), d = card(2, "g");
+  s.reveal = [a, b, c, d];
+  E.step(s, { id: a.id, kind: 1, opt: -1 });
+  assert.strictEqual(s.round, 1, "second player must still place");
+  assert.strictEqual(s.turn, 1);
+  E.step(s, { id: b.id, kind: 1, opt: -1 });
+  assert.strictEqual(s.round, 2);
+  assert.strictEqual(s.roundScores.length, 1);
+  assert.strictEqual(s.starter, 1, "last player to place starts the next round");
+}
+
+// Full games: conservation, termination, legality, three rounds.
+for (const spec of [["random", "random"], ["greedy", "greedy:0.2"], ["mc:3", "greedy"]]) {
+  const bots = spec.map(B.make);
+  for (let g = 0; g < 5; g++) {
+    const s = E.newGame(g + 1), r = E.rng(g + 99);
+    let guard = 0;
+    while (!s.over) {
+      const m = bots[s.turn].choose(s, r);
+      assert.ok(E.legalMoves(s).some((x) => JSON.stringify(x) === JSON.stringify(m)), "illegal move chosen");
+      E.step(s, m);
+      if (!s.over) {
+        const n = s.draw.length + s.reveal.length + [0, 1].reduce((a, p) => a + s.up[p].filter(Boolean).length + s.down[p].filter(Boolean).length, 0);
+        assert.strictEqual(n, 70, "cards not conserved");
       }
+      assert.ok(++guard < 1000, "no termination");
     }
+    assert.strictEqual(s.roundScores.length, 3);
   }
 }
 
