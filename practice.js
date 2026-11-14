@@ -12,6 +12,7 @@ const PRACTICE = (() => {
   const NAMES = { b: "blue", g: "green", y: "yellow", r: "red", m: "multi-colour" };
   const SW = '<svg viewBox="3 3 18 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 12.4c-1.1.1-1.6-1.2-.8-1.9 1.1-.9 2.9-.1 3.2 1.4.4 2.1-1.5 3.8-3.7 3.5-2.8-.4-4.2-3.4-3.4-5.9.9-3 4.2-4.5 7.1-3.6 3.6 1.1 5 5.3 3.6 8.6"/></svg>';
   const XX = '<svg viewBox="4 4 16 16" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>';
+  const UNDO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
   const rep = (s, n) => (n > 0 ? s.repeat(n) : "");
   const signed = (v) => (v < 0 ? `−${-v}` : `+${v}`);
   const who = (p) => (p === YOU ? "You" : "Bot");
@@ -237,7 +238,7 @@ const PRACTICE = (() => {
     }
     if (hinted && !choosing) head = hintText(hinted, hint);
     if (warn) head = warn;
-    const side = `<div class="pside"><button class="btn ghost small" id="p-hint" ${mine && !hintBusy ? "" : "disabled"}>${hintBusy ? "…" : "Hint"}</button><button class="btn ghost small" id="p-undo" ${hist.length ? "" : "disabled"}>Undo</button></div>`;
+    const side = `<div class="pside"><button class="pico" id="p-hint" aria-label="Hint" title="Hint" ${mine && !hintBusy ? "" : "disabled"}>${hintBusy ? "…" : "?"}</button><button class="pico" id="p-undo" aria-label="Undo" title="Undo" ${hist.length ? "" : "disabled"}>${UNDO}</button></div>`;
     return { head: `<div class="phint${warn ? " warn" : hinted && !choosing ? " tip" : ""}">${head}</div>`, panel: `<div class="pturn">${body}${side}</div>` };
   }
 
@@ -280,7 +281,7 @@ const PRACTICE = (() => {
       ${over ? `<p class="bt pv">${verdict}</p>` : ""}
       <div class="actions">
         <button class="btn" id="p-next">${over ? "Play again" : `Start round ${b.round + 1}`}</button>
-        <button class="btn ghost small" id="p-undo" ${hist.length ? "" : "disabled"}>Undo last move</button>
+        <button class="btn ghost small" id="p-undo" ${hist.length ? "" : "disabled"}>↶ Undo last move</button>
         ${over ? '<button class="link dark" id="p-done">Back to start</button>' : ""}
       </div>
     </div>`;
