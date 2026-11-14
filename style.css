@@ -344,3 +344,48 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .pbtns .btn.small { flex: 1; max-width: 160px; }
 .pbtns .btn:disabled, .actions .btn:disabled { opacity: .35; cursor: default; }
 .phtext { margin: 8px 8px 0; font-size: 14px; font-weight: 700; color: #2e7d32; }
+
+/* practice: one-screen game layout */
+.pplay .banner { display: none; }
+.pplay .tabs { margin: calc(env(safe-area-inset-top) + 8px) auto 8px; }
+.pplay main { padding-bottom: 0; }
+.pgame { --A: clamp(34px, calc((100vh - 404px) / 6.06), 96px); padding: 8px 10px; margin-bottom: 0; }
+@supports (height: 100dvh) { .pgame { --A: clamp(34px, calc((100dvh - 404px) / 6.06), 96px); } }
+.pgame .bar { margin: -8px -10px 4px; padding: 5px 12px; gap: 8px; }
+.pgame .bar small { margin-left: auto; font-size: 13px; }
+.pquit { background: none; border: 0; color: #fff; font-size: 16px; line-height: 1; padding: 2px 4px; cursor: pointer; opacity: .85; }
+.pgame .phead { margin: 4px 0 3px; }
+.pgame .parea { gap: 4px; }
+.pgame .parea.me { --ch: var(--A); --cw: calc(var(--ch) * .64); }
+.pgame .parea.opp { --ch: calc(var(--A) * .72); --cw: calc(var(--ch) * .64); }
+.pgame .pn { font-size: calc(var(--cw) * .55); }
+.pgame .pturn { padding: 5px 6px; margin: 5px 0; }
+.pgame .phint { min-height: 2.5em; font-size: 13px; margin-bottom: 3px; padding: 0; display: flex; align-items: center; justify-content: center; }
+.pgame .phint.tip { color: #2e7d32; }
+.pbody { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.pgame .preveal { --ch: calc(var(--A) * .9); --cw: calc(var(--ch) * .64); gap: 3px; margin: 0; }
+.pgame .prev { padding: 2px; }
+.pside { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.pside .btn.small { padding: 6px 10px; font-size: 13px; width: 100%; min-width: 58px; }
+.pside .btn:disabled { opacity: .35; cursor: default; }
+.pgame .pchoice { padding: 0; gap: 6px; flex: 1; }
+.pgame .pch { flex-direction: row; justify-content: center; gap: 6px; padding: 3px 6px; height: calc(var(--A) * .9 + 8px); font-size: 12px; line-height: 1.2; }
+.pprev { --ch: calc(var(--A) * .62); --cw: calc(var(--ch) * .64); display: block; flex: none; }
+.pgame .plog { min-height: 2.4em; margin: 4px 0 0; font-size: 12px; line-height: 1.2; }
+
+/* practice: bot grid and reveal side by side */
+.pgame { --A: clamp(34px, calc((100vh - 340px) / 4.7), 96px); }
+@supports (height: 100dvh) { .pgame { --A: clamp(34px, calc((100dvh - 340px) / 4.7), 96px); } }
+.pgame .phint { min-height: 2.5em; margin: 2px 0 4px; }
+.ptop { display: flex; gap: 8px; align-items: flex-start; justify-content: center; }
+.popp { flex: none; }
+.popp .phead { margin-top: 0; justify-content: space-between; }
+.pgame .parea.opp { --ch: calc(var(--A) * .56); --cw: calc(var(--ch) * .64); }
+.pgame .ptop .pturn { flex: 1; min-width: 0; margin: 0; padding: 4px; }
+.pgame .preveal { --ch: calc(var(--A) * .85); --cw: calc(var(--ch) * .64); display: grid; grid-template-columns: repeat(2, auto); gap: 2px; justify-content: center; }
+.pgame .pside { flex-direction: row; margin-top: 4px; }
+.pgame .pside .btn.small { flex: 1; min-width: 0; }
+.pgame .pchoice { flex-direction: column; gap: 4px; }
+.pgame .pch { height: calc(var(--A) * .85 + 8px); flex: none; width: 100%; }
+.pc b { top: 60%; font-size: calc(var(--cw) * .4); }
+.psw svg, .pxx svg { width: calc(var(--cw) * .16); height: calc(var(--cw) * .16); }

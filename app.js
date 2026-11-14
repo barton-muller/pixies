@@ -73,6 +73,7 @@ function saveGame() { store.set(KEYS.cur, game); }
 /* ---------- views ---------- */
 
 function show() {
+  if (tab !== "practice") document.body.classList.remove("pplay");
   document.querySelectorAll(".tabs button").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
   $("#view-setup").hidden = !(tab === "game" && !game);
   $("#view-game").hidden = !(tab === "game" && game);

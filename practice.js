@@ -214,33 +214,31 @@ const PRACTICE = (() => {
   }
 
   function stackBtn(top, opt, text, hinted) {
-    return `<button class="pch${hinted ? " hint" : ""}" data-place='${JSON.stringify({ kind: 2, opt })}'><span class="pprev" style="--cw:46px;--ch:72px"><span class="pcell v">${card(top, { down: true, cls: "peek" })}${card(top, { cls: "up" })}</span></span>${text}</button>`;
+    return `<button class="pch${hinted ? " hint" : ""}" data-place='${JSON.stringify({ kind: 2, opt })}'><span class="pprev"><span class="pcell v">${card(top, { down: true, cls: "peek" })}${card(top, { cls: "up" })}</span></span><span>${text}</span></button>`;
   }
 
   function turnPanel() {
     const mine = s.turn === YOU && !busy;
     const hinted = hint && s.reveal.find((x) => x.id === hint.id);
     const cards = s.reveal.map((c) => `<button class="prev${sel === c.id ? " sel" : ""}${hinted && hinted.k === c.k ? " hint" : ""}" data-pick="${c.id}" ${mine ? "" : "disabled"}>${card(c)}</button>`).join("");
-    const ghosts = rep('<div class="pghost"></div>', 4 - s.reveal.length);
-    let head = busy ? "Bot is thinking…" : mine ? `Your pick · card ${s.pickIdx + 1} of 4. Tap a card, then a space.` : "";
-    let controls = "";
+    let body = `<div class="preveal">${cards}${rep('<div class="pghost"></div>', 4 - s.reveal.length)}</div>`;
+    let head = busy ? "Bot is thinking…" : mine ? `Your pick · card ${s.pickIdx + 1} of 4${s.round === 1 ? ". Tap a card, then a space." : ""}` : "";
     if (mine && sel !== null) {
       const c = s.reveal.find((x) => x.id === sel), pl = E.placements(s, YOU, c), n = c.n;
       const hm = hinted && hinted.k === c.k ? hint : null;
-      if (pl[0].kind === 1) head = `Tap space ${n}${s.down[YOU][n - 1] ? " (validates the face-down card)" : ""}.`;
+      if (pl[0].kind === 1) head = `Tap space ${n}${s.down[YOU][n - 1] ? " (validates it)" : ""}.`;
       else if (pl[0].kind === 2) {
-        const old = s.up[YOU][n - 1];
-        head = choosing ? `Space ${n} already has a card. Which stays on top?` : `Tap space ${n}. It already has a card.`;
-        if (choosing) controls = `<div class="pchoice">${stackBtn(c, 0, "New card on top", hm && hm.opt === 0)}${stackBtn(old, 1, "New card underneath", hm && hm.opt === 1)}</div>`;
+        head = choosing ? "Which card stays on top?" : `Space ${n} has a card. Tap it.`;
+        if (choosing) body = `<div class="pchoice">${stackBtn(c, 0, "New card on top", hm && hm.opt === 0)}${stackBtn(s.up[YOU][n - 1], 1, "New card underneath", hm && hm.opt === 1)}</div>`;
       } else if (pl[0].opt < 0) {
         head = `Space ${n} is validated and the board is full.`;
-        controls = `<button class="btn ghost" data-place='${JSON.stringify(pl[0])}'>Discard this card</button>`;
-      } else head = `Space ${n} is validated. Tap an empty space to place it face-down.`;
+        body = `<div class="pchoice"><button class="pch" data-place='${JSON.stringify(pl[0])}'>Discard this card</button></div>`;
+      } else head = `Space ${n} is validated. Tap an empty space.`;
     }
+    if (hinted && !choosing) head = hintText(hinted, hint);
     if (warn) head = warn;
-    const tools = `<div class="pbtns"><button class="btn ghost small" id="p-hint" ${mine && !hintBusy ? "" : "disabled"}>${hintBusy ? "Thinking…" : "Hint"}</button><button class="btn ghost small" id="p-undo" ${hist.length ? "" : "disabled"}>Undo</button></div>`;
-    const ht = hinted ? `<p class="phtext">${hintText(hinted, hint)}</p>` : "";
-    return `<div class="pturn"><div class="phint${warn ? " warn" : ""}">${head}</div><div class="preveal">${cards}${ghosts}</div>${controls}${ht}${tools}</div>`;
+    const side = `<div class="pside"><button class="btn ghost small" id="p-hint" ${mine && !hintBusy ? "" : "disabled"}>${hintBusy ? "…" : "Hint"}</button><button class="btn ghost small" id="p-undo" ${hist.length ? "" : "disabled"}>Undo</button></div>`;
+    return { head: `<div class="phint${warn ? " warn" : hinted && !choosing ? " tip" : ""}">${head}</div>`, panel: `<div class="pturn">${body}${side}</div>` };
   }
 
   function gameHtml() {
@@ -250,14 +248,16 @@ const PRACTICE = (() => {
     const o = pl ? (pl[0].kind === 3 ? { pick: pl[0].opt >= 0 } : { target: c.n - 1 }) : {};
     if (pl && hinted && hinted.k === c.k && hint.kind === 3 && hint.opt >= 0) o.hintCell = hint.opt;
     const tot = (p) => s.totals[p] + E.score(s, p).total;
-    return `<div class="card">
-      <div class="bar">Round ${s.round} of 3<small>zone ×${s.mult} · deck ${s.draw.length}</small></div>
-      <div class="ptot"><span>You <b>${tot(YOU)}</b></span><span>Bot <b>${tot(BOT)}</b></span></div>
-      ${areaCard(BOT, "opp", {})}
-      ${turnPanel()}
+    const t = turnPanel(), ob = E.score(s, BOT);
+    return `<div class="card pgame">
+      <div class="bar"><span>Round ${s.round}/3 · ×${s.mult}</span><small>You ${tot(YOU)} · Bot ${tot(BOT)}</small><button class="pquit" id="p-quit" aria-label="Quit game">✕</button></div>
+      ${t.head}
+      <div class="ptop">
+        <div class="popp"><div class="phead"><span class="pwho bot">Bot</span><b>${ob.total}</b></div>${area(s.up[BOT], s.down[BOT], "opp")}</div>
+        ${t.panel}
+      </div>
       ${areaCard(YOU, "me", o)}
       <p class="plog">${log || "&nbsp;"}</p>
-      <div class="actions"><button class="link dark" id="p-quit">Quit game</button></div>
     </div>`;
   }
 
@@ -289,6 +289,7 @@ const PRACTICE = (() => {
   function render() {
     const el = document.getElementById("view-practice");
     el.innerHTML = !s ? setupHtml() : summary ? summaryHtml() : gameHtml();
+    document.body.classList.toggle("pplay", !!s && !el.hidden);
     warn = "";
     const on = (q, fn) => el.querySelectorAll(q).forEach((b) => b.addEventListener("click", () => fn(b)));
     on("[data-level]", (b) => { level = b.dataset.level; persist(); render(); });
@@ -332,6 +333,7 @@ const PRACTICE = (() => {
     log = "";
     persist();
     render();
+    window.scrollTo(0, 0);
     maybeBot();
   }
 
