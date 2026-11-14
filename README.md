@@ -24,7 +24,7 @@ The Battles tab is an animated step-by-step tutorial (with one tap-to-answer ste
 
 ## Practice tab
 
-The Practice tab plays a full 3-round game of base Pixies against a bot: tap one of the revealed cards, then place it (the tab shows where it goes, asks which card stays on top when a space already has one, or lets you tap an empty space for a face-down card). Four levels, Easy to Expert; the record per level and the game in progress survive reloads. The bot runs in a Web Worker (`bot/worker.js`) and falls back to the main thread when workers are unavailable, e.g. when `index.html` is opened as a file.
+The Practice tab plays a full 3-round game of base Pixies against a bot: tap one of the revealed cards, then tap a space. Its own number's space places it (with a new-on-top / new-underneath choice when that space already holds a card), any empty space places it face-down when the rules require that, and an illegal tap says why. Hint asks the strongest bot for your best move, and Undo takes back your last move, including the bot's reply. Four levels, Easy to Expert; the record per level and the game in progress survive reloads (undo history does not). The bot runs in a Web Worker (`bot/worker.js`) and falls back to the main thread when workers are unavailable, e.g. when `index.html` is opened as a file.
 
 `bot/engine.js` implements the base game for two players (not the Battles house variant): public 4-card reveals, alternating picks, the three placement cases, round end, three rounds, and scoring (validated cards, spirals/crosses, specials, largest colour zone ×2/×3/×4). `bot/deck.js` is the 70-card deck transcribed from photos. `bot/bot.js` has the opponents; `practice.js` is the tab.
 

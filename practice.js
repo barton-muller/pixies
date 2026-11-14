@@ -2,19 +2,20 @@
 
 const PRACTICE = (() => {
   const E = PIXIES;
-  const YOU = 0, BOT = 1, KEY = "pixies.practice", THINK_MS = 700;
+  const YOU = 0, BOT = 1, KEY = "pixies.practice", THINK_MS = 700, HINT_SPEC = "mc:120";
   const LEVELS = [
     { id: "easy", name: "Easy", spec: "greedy:0.35", note: "Takes the best-scoring card, but blunders a third of the time." },
     { id: "medium", name: "Medium", spec: "greedy", note: "Always takes the best-scoring card and snatches cards you would want." },
     { id: "hard", name: "Hard", spec: "mc:20", note: "Simulates 20 possible futures for every move." },
     { id: "expert", name: "Expert", spec: "mc:120", note: "Simulates 120 possible futures for every move." },
   ];
-  const NAMES = { b: "blue", g: "green", y: "yellow", r: "red", m: "multi" };
+  const NAMES = { b: "blue", g: "green", y: "yellow", r: "red", m: "multi-colour" };
   const SW = '<svg viewBox="3 3 18 18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 12.4c-1.1.1-1.6-1.2-.8-1.9 1.1-.9 2.9-.1 3.2 1.4.4 2.1-1.5 3.8-3.7 3.5-2.8-.4-4.2-3.4-3.4-5.9.9-3 4.2-4.5 7.1-3.6 3.6 1.1 5 5.3 3.6 8.6"/></svg>';
   const XX = '<svg viewBox="4 4 16 16" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>';
   const rep = (s, n) => (n > 0 ? s.repeat(n) : "");
   const signed = (v) => (v < 0 ? `−${-v}` : `+${v}`);
   const who = (p) => (p === YOU ? "You" : "Bot");
+  const plural = (n, w, pl = w + "s") => `${n} ${n === 1 ? w : pl}`;
 
   const saved = (() => {
     try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch { return {}; }
@@ -24,7 +25,8 @@ const PRACTICE = (() => {
   let s = saved.game ? saved.game.s : null;
   let summary = saved.game ? saved.game.summary : null;
   let log = saved.game ? saved.game.log : "";
-  let sel = null, busy = false, token = 0, worker, workerOff = false;
+  let sel = null, choosing = false, warn = "", hint = null, hintBusy = false, hist = [];
+  let busy = false, token = 0, ver = 0, worker, workerOff = false;
 
   const persist = () => {
     try { localStorage.setItem(KEY, JSON.stringify({ level, rec, game: s ? { s, summary, log } : null })); } catch { /* storage unavailable */ }
@@ -35,9 +37,9 @@ const PRACTICE = (() => {
   const spec = () => LEVELS.find((l) => l.id === level).spec;
   const hideDraw = (x) => ({ ...x, draw: [] });
 
-  function ask(state) {
+  function ask(state, botSpec) {
     const seed = (Math.random() * 2 ** 31) | 0;
-    const local = () => new Promise((res) => setTimeout(() => res(PIXBOT.make(spec()).choose(hideDraw(state), E.rng(seed))), 20));
+    const local = () => new Promise((res) => setTimeout(() => res(PIXBOT.make(botSpec).choose(hideDraw(state), E.rng(seed))), 20));
     if (workerOff || !window.Worker) return local();
     try {
       worker ||= new Worker("bot/worker.js");
@@ -62,7 +64,7 @@ const PRACTICE = (() => {
       };
       worker.addEventListener("message", done);
       worker.addEventListener("error", fail);
-      worker.postMessage({ id, state: hideDraw(state), spec: spec(), seed });
+      worker.postMessage({ id, state: hideDraw(state), spec: botSpec, seed });
     });
   }
 
@@ -71,7 +73,7 @@ const PRACTICE = (() => {
     busy = true;
     const mine = token, t0 = performance.now();
     render();
-    ask(s).then((m) => new Promise((res) => setTimeout(() => res(m), Math.max(0, THINK_MS - (performance.now() - t0)))))
+    ask(s, spec()).then((m) => new Promise((res) => setTimeout(() => res(m), Math.max(0, THINK_MS - (performance.now() - t0)))))
       .then((m) => {
         if (mine !== token) return;
         busy = false;
@@ -79,23 +81,51 @@ const PRACTICE = (() => {
       });
   }
 
+  function askHint() {
+    if (!s || s.turn !== YOU || busy || hintBusy || summary) return;
+    hintBusy = true;
+    const mine = ver;
+    render();
+    ask(s, HINT_SPEC).then((m) => {
+      if (mine !== ver) return;
+      hintBusy = false;
+      hint = m;
+      render();
+    });
+  }
+
   /* ---------- moves ---------- */
 
-  const label = (c) => `${NAMES[c.c]} ${c.n}`;
+  const desc = (c) => {
+    const sym = c.sp ? ", special" : c.sw ? `, ${plural(c.sw, "spiral")}` : c.x ? `, ${plural(c.x, "cross", "crosses")}` : "";
+    return `${NAMES[c.c]} ${c.n}${sym}`;
+  };
 
   function describe(c, m) {
     const p = s.turn, n = c.n, dn = s.down[p][n - 1];
-    if (m.kind === 1) return `${who(p)} placed ${label(c)} on space ${n}${dn ? ", validating it" : ""}.`;
-    if (m.kind === 2) return `${who(p)} added ${label(c)} to space ${n} and kept ${m.opt === 0 ? "the new card" : "the old card"} on top.`;
-    return m.opt >= 0 ? `${who(p)} put ${label(c)} face-down on space ${m.opt + 1}.` : `${who(p)} discarded ${label(c)}.`;
+    if (m.kind === 1) return `${who(p)} placed ${desc(c)} on space ${n}${dn ? ", validating it" : ""}.`;
+    if (m.kind === 2) return `${who(p)} added ${desc(c)} to space ${n}: ${m.opt === 0 ? "new card on top" : "new card underneath"}.`;
+    return m.opt >= 0 ? `${who(p)} put ${desc(c)} face-down on space ${m.opt + 1}.` : `${who(p)} discarded ${desc(c)}.`;
+  }
+
+  function hintText(c, m) {
+    const gain = E.scoreAfter(s, YOU, c, m) - E.score(s, YOU).total, n = c.n;
+    const where = m.kind === 1 ? `place it on space ${n}` : m.kind === 2 ? `put it ${m.opt === 0 ? "on top of" : "underneath"} the card on space ${n}` : m.opt >= 0 ? `put it face-down on space ${m.opt + 1}` : "discard it";
+    return `Hint: take ${desc(c)} and ${where} (${signed(gain)} now).`;
   }
 
   function apply(m) {
     const c = s.reveal.find((x) => x.id === m.id);
+    if (s.turn === YOU) hist.push(JSON.stringify({ s, summary, log, rec }));
     log = describe(c, m);
     const rounds = s.roundScores.length;
     E.step(s, m);
+    ver++;
     sel = null;
+    choosing = false;
+    hint = null;
+    hintBusy = false;
+    warn = "";
     if (s.roundScores.length > rounds) {
       summary = s.lastBoard;
       if (s.over) {
@@ -108,23 +138,54 @@ const PRACTICE = (() => {
     maybeBot();
   }
 
+  function undo() {
+    if (!hist.length) return;
+    const o = JSON.parse(hist.pop());
+    token++;
+    ver++;
+    busy = false;
+    s = o.s;
+    summary = o.summary;
+    log = o.log;
+    Object.keys(rec).forEach((k) => delete rec[k]);
+    Object.assign(rec, o.rec);
+    sel = null;
+    choosing = false;
+    hint = null;
+    hintBusy = false;
+    warn = "";
+    persist();
+    render();
+  }
+
+  function tapCell(i) {
+    if (!s || summary || busy || s.turn !== YOU || sel === null) return;
+    const c = s.reveal.find((x) => x.id === sel), pl = E.placements(s, YOU, c), n = c.n;
+    if (pl[0].kind === 3) {
+      if (pl[0].opt >= 0 && !s.up[YOU][i] && !s.down[YOU][i]) return apply({ id: c.id, kind: 3, opt: i });
+      warn = pl[0].opt < 0 ? "No empty space is left." : i === n - 1 ? `Space ${n} is already validated. Tap an empty space.` : "That space is taken. Tap an empty space.";
+    } else if (i !== n - 1) warn = `This card goes on space ${n}.`;
+    else if (pl[0].kind === 1) return apply({ id: c.id, ...pl[0] });
+    else choosing = true;
+    render();
+  }
+
   /* ---------- rendering ---------- */
 
   function card(c, o = {}) {
     if (o.down) return `<div class="pc down ${o.cls || ""}"></div>`;
-    const grid = (n) => (n >= 4 ? " two" : "");
+    const two = (n) => (n >= 4 ? " two" : "");
     const sp = c.sp ? `<span class="psp">${SW}<i>/</i><u class="c-${c.sp}"></u></span>` : "";
-    const col = c.c === "m"
-      ? '<span class="pcol"><s class="c-b"></s><s class="c-g"></s><s class="c-y"></s><s class="c-r"></s></span>'
-      : `<span class="pcol one c-${c.c}">${c.c.toUpperCase()}</span>`;
+    const dots = c.c === "m" ? '<span class="pcol"><s class="c-b"></s><s class="c-g"></s><s class="c-y"></s><s class="c-r"></s></span>' : "";
     return `<div class="pc c-${c.c}${c.sp ? " sp" : ""} ${o.cls || ""}" data-id="${c.id}">
-      <div class="psw${grid(c.sw)}">${rep(SW, c.sw)}</div><b>${c.n}</b><div class="pxx${grid(c.x)}">${rep(XX, c.x)}</div>${sp}${col}</div>`;
+      <div class="psw${two(c.sw)}">${rep(SW, c.sw)}</div><b>${c.n}</b><div class="pxx${two(c.x)}">${rep(XX, c.x)}</div>${sp}${dots}</div>`;
   }
 
   function area(up, down, cls, o = {}) {
     let cells = "";
     for (let i = 0; i < 9; i++) {
-      const hi = o.target === i ? " target" : o.pick && !up[i] && !down[i] ? " pick" : "";
+      const free = !up[i] && !down[i];
+      const hi = o.hintCell === i ? " hc" : o.target === i ? " target" : o.pick && free ? " pick" : "";
       cells += `<div class="pcell${up[i] && down[i] ? " v" : ""}${hi}" data-cell="${i}"><span class="pn">${i + 1}</span>${down[i] ? card(down[i], { down: true, cls: "peek" }) : ""}${up[i] ? card(up[i], { cls: "up" }) : ""}</div>`;
     }
     return `<div class="parea ${cls}">${cells}</div>`;
@@ -148,37 +209,46 @@ const PRACTICE = (() => {
     </div>
     <div class="card">
       <div class="bar">How it works</div>
-      <p class="btext">Each turn, 4 cards are revealed and you take turns picking one, you first or second, twice each. A card goes to the space with its number. If that space already holds a face-up card, you choose which of the two stays on top and the other goes face-down underneath. Once a space is validated, further cards of that number go face-down on any empty space. A round ends when someone has filled all 9 spaces. Three rounds, with the colour zone worth ×2, ×3, ×4.</p>
+      <p class="btext">Each turn, 4 cards are revealed and you take turns picking one, you first or second, twice each. Tap a card, then tap a space. A card belongs on the space with its number. If that space already holds a face-up card, you choose which of the two stays on top and the other goes face-down underneath. Once a space is validated, further cards of that number go face-down on any empty space. A round ends when someone has filled all 9 spaces. Three rounds, with the colour zone worth ×2, ×3, ×4.</p>
     </div>`;
+  }
+
+  function stackBtn(top, opt, text, hinted) {
+    return `<button class="pch${hinted ? " hint" : ""}" data-place='${JSON.stringify({ kind: 2, opt })}'><span class="pprev" style="--cw:46px;--ch:72px"><span class="pcell v">${card(top, { down: true, cls: "peek" })}${card(top, { cls: "up" })}</span></span>${text}</button>`;
   }
 
   function turnPanel() {
     const mine = s.turn === YOU && !busy;
-    const cards = s.reveal.map((c) => `<button class="prev${sel === c.id ? " sel" : ""}" data-pick="${c.id}" ${mine ? "" : "disabled"}>${card(c)}</button>`).join("");
-    const gone = rep('<div class="pghost"></div>', 4 - s.reveal.length);
-    let head = busy ? "Bot is thinking…" : mine ? `Your pick · card ${s.pickIdx + 1} of 4` : "";
+    const hinted = hint && s.reveal.find((x) => x.id === hint.id);
+    const cards = s.reveal.map((c) => `<button class="prev${sel === c.id ? " sel" : ""}${hinted && hinted.k === c.k ? " hint" : ""}" data-pick="${c.id}" ${mine ? "" : "disabled"}>${card(c)}</button>`).join("");
+    const ghosts = rep('<div class="pghost"></div>', 4 - s.reveal.length);
+    let head = busy ? "Bot is thinking…" : mine ? `Your pick · card ${s.pickIdx + 1} of 4. Tap a card, then a space.` : "";
     let controls = "";
     if (mine && sel !== null) {
       const c = s.reveal.find((x) => x.id === sel), pl = E.placements(s, YOU, c), n = c.n;
-      if (pl[0].kind === 1) {
-        head = `Space ${n}${s.down[YOU][n - 1] ? " · validates the face-down card" : ""}`;
-        controls = `<button class="btn" data-place='${JSON.stringify(pl[0])}'>Place ${label(c)} on space ${n}</button>`;
-      } else if (pl[0].kind === 2) {
+      const hm = hinted && hinted.k === c.k ? hint : null;
+      if (pl[0].kind === 1) head = `Tap space ${n}${s.down[YOU][n - 1] ? " (validates the face-down card)" : ""}.`;
+      else if (pl[0].kind === 2) {
         const old = s.up[YOU][n - 1];
-        head = `Space ${n} already has ${label(old)}. Which stays on top?`;
-        controls = `<div class="pchoice">${pl.map((x) => `<button class="btn ${x.opt ? "ghost" : ""}" data-place='${JSON.stringify(x)}'>Keep ${label(x.opt ? old : c)}</button>`).join("")}</div>`;
+        head = choosing ? `Space ${n} already has a card. Which stays on top?` : `Tap space ${n}. It already has a card.`;
+        if (choosing) controls = `<div class="pchoice">${stackBtn(c, 0, "New card on top", hm && hm.opt === 0)}${stackBtn(old, 1, "New card underneath", hm && hm.opt === 1)}</div>`;
       } else if (pl[0].opt < 0) {
         head = `Space ${n} is validated and the board is full.`;
-        controls = `<button class="btn ghost" data-place='${JSON.stringify(pl[0])}'>Discard ${label(c)}</button>`;
-      } else head = `Space ${n} is validated: tap an empty space for ${label(c)} face-down`;
-    } else if (mine) head += " · tap a card";
-    return `<div class="pturn"><div class="phint">${head}</div><div class="preveal">${cards}${gone}</div>${controls}</div>`;
+        controls = `<button class="btn ghost" data-place='${JSON.stringify(pl[0])}'>Discard this card</button>`;
+      } else head = `Space ${n} is validated. Tap an empty space to place it face-down.`;
+    }
+    if (warn) head = warn;
+    const tools = `<div class="pbtns"><button class="btn ghost small" id="p-hint" ${mine && !hintBusy ? "" : "disabled"}>${hintBusy ? "Thinking…" : "Hint"}</button><button class="btn ghost small" id="p-undo" ${hist.length ? "" : "disabled"}>Undo</button></div>`;
+    const ht = hinted ? `<p class="phtext">${hintText(hinted, hint)}</p>` : "";
+    return `<div class="pturn"><div class="phint${warn ? " warn" : ""}">${head}</div><div class="preveal">${cards}${ghosts}</div>${controls}${ht}${tools}</div>`;
   }
 
   function gameHtml() {
     const c = sel !== null && s.turn === YOU ? s.reveal.find((x) => x.id === sel) : null;
     const pl = c ? E.placements(s, YOU, c) : null;
+    const hinted = hint && s.reveal.find((x) => x.id === hint.id);
     const o = pl ? (pl[0].kind === 3 ? { pick: pl[0].opt >= 0 } : { target: c.n - 1 }) : {};
+    if (pl && hinted && hinted.k === c.k && hint.kind === 3 && hint.opt >= 0) o.hintCell = hint.opt;
     const tot = (p) => s.totals[p] + E.score(s, p).total;
     return `<div class="card">
       <div class="bar">Round ${s.round} of 3<small>zone ×${s.mult} · deck ${s.draw.length}</small></div>
@@ -210,6 +280,7 @@ const PRACTICE = (() => {
       ${over ? `<p class="bt pv">${verdict}</p>` : ""}
       <div class="actions">
         <button class="btn" id="p-next">${over ? "Play again" : `Start round ${b.round + 1}`}</button>
+        <button class="btn ghost small" id="p-undo" ${hist.length ? "" : "disabled"}>Undo last move</button>
         ${over ? '<button class="link dark" id="p-done">Back to start</button>' : ""}
       </div>
     </div>`;
@@ -218,15 +289,19 @@ const PRACTICE = (() => {
   function render() {
     const el = document.getElementById("view-practice");
     el.innerHTML = !s ? setupHtml() : summary ? summaryHtml() : gameHtml();
+    warn = "";
     const on = (q, fn) => el.querySelectorAll(q).forEach((b) => b.addEventListener("click", () => fn(b)));
     on("[data-level]", (b) => { level = b.dataset.level; persist(); render(); });
     on("#p-start", start);
-    on("[data-pick]", (b) => { sel = sel === +b.dataset.pick ? null : +b.dataset.pick; render(); });
-    on("[data-place]", (b) => { if (s.turn === YOU && !busy) apply({ id: sel, ...JSON.parse(b.dataset.place) }); });
-    on(".parea.me .pcell.pick", (b) => {
-      const c = s.reveal.find((x) => x.id === sel);
-      if (c && s.turn === YOU && !busy) apply({ id: c.id, kind: 3, opt: +b.dataset.cell });
+    on("[data-pick]", (b) => {
+      sel = sel === +b.dataset.pick ? null : +b.dataset.pick;
+      choosing = false;
+      render();
     });
+    on(".parea.me .pcell", (b) => tapCell(+b.dataset.cell));
+    on("[data-place]", (b) => { if (s.turn === YOU && !busy && sel !== null) apply({ id: sel, ...JSON.parse(b.dataset.place) }); });
+    on("#p-hint", askHint);
+    on("#p-undo", undo);
     on("#p-quit", () => { if (confirm("Quit this practice game?")) reset(); });
     on("#p-done", reset);
     on("#p-next", () => {
@@ -238,24 +313,31 @@ const PRACTICE = (() => {
     });
   }
 
-  function start() {
+  function clearUi() {
     token++;
+    ver++;
     busy = false;
-    s = E.newGame((Math.random() * 2 ** 31) | 0);
-    summary = null;
-    log = "";
     sel = null;
+    choosing = false;
+    hint = null;
+    hintBusy = false;
+    warn = "";
+    hist = [];
+    summary = null;
+  }
+
+  function start() {
+    clearUi();
+    s = E.newGame((Math.random() * 2 ** 31) | 0);
+    log = "";
     persist();
     render();
     maybeBot();
   }
 
   function reset() {
-    token++;
-    busy = false;
+    clearUi();
     s = null;
-    summary = null;
-    sel = null;
     persist();
     render();
   }

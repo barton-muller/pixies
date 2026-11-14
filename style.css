@@ -328,6 +328,19 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .psp svg { width: calc(var(--cw) * .17); height: calc(var(--cw) * .17); display: block; }
 .psp u { width: calc(var(--cw) * .17); height: calc(var(--cw) * .17); box-sizing: border-box; border-radius: 3px; background: var(--cc); border: 1.5px solid #fff; display: block; }
 .pcol { position: absolute; left: 0; right: 0; bottom: 4px; display: flex; justify-content: center; gap: 2px; }
-.pcol.one { left: 50%; right: auto; transform: translateX(-50%); width: calc(var(--cw) * .3); height: calc(var(--cw) * .3); border-radius: 4px; background: var(--cc); border: 1.5px solid #fff; color: #fff; font-size: calc(var(--cw) * .2); font-weight: 800; align-items: center; }
 .pcol s { width: calc(var(--cw) * .16); height: calc(var(--cw) * .16); border-radius: 3px; background: var(--cc); border: 1px solid #fff; display: block; }
-.pc.c-y .pcol.one { color: #3a2e05; }
+.pc.c-y 
+.phint.warn { color: var(--p2); }
+.prev.hint .pc { box-shadow: 0 0 0 3px #2e9a4a, 0 2px 4px rgba(0,0,0,.35); }
+.prev.sel.hint .pc { box-shadow: 0 0 0 3px var(--pink), 0 4px 8px rgba(0,0,0,.35); }
+.pcell.hc { border: 2px solid #2e9a4a; background: #e6f4e8; cursor: pointer; animation: pulse 1.4s ease-in-out infinite; }
+.pcell.target { cursor: pointer; animation: pulse 1.4s ease-in-out infinite; }
+.pchoice { gap: 10px; }
+.pch { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 8px 4px; border: 2px solid var(--line); background: #fff; border-radius: 12px; font: inherit; font-weight: 800; font-size: 14px; color: var(--forest); cursor: pointer; }
+.pch.hint { border-color: #2e9a4a; background: #e6f4e8; }
+.pprev { display: block; }
+.pprev .pcell { display: block; border-style: solid; border-color: transparent; }
+.pbtns { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+.pbtns .btn.small { flex: 1; max-width: 160px; }
+.pbtns .btn:disabled, .actions .btn:disabled { opacity: .35; cursor: default; }
+.phtext { margin: 8px 8px 0; font-size: 14px; font-weight: 700; color: #2e7d32; }
