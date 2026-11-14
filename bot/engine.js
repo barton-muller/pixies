@@ -50,6 +50,11 @@ const PIXIES = (() => {
 
   /* ---------- setup ---------- */
 
+  function deal(s) {
+    s.reveal = s.draw.splice(0, REVEAL);
+    s.hiddenId = s.hideFourth ? s.reveal[REVEAL - 1].id : null;
+  }
+
   function startRound(s, starter) {
     s.round++;
     s.mult = s.round + 1;
@@ -57,16 +62,16 @@ const PIXIES = (() => {
     s.down = [Array(9).fill(null), Array(9).fill(null)];
     s.placed = [0, 0];
     s.draw = shuffle(s.pool.slice(), () => rnd(s));
-    s.reveal = s.draw.splice(0, REVEAL);
+    deal(s);
     s.starter = starter;
     s.turn = starter;
     s.pickIdx = 0;
   }
 
-  function newGame(seed, deck = DECK) {
+  function newGame(seed, deck = DECK, opts = {}) {
     const pool = deck.map(mkCard), numCount = Array(9).fill(0);
     pool.forEach((c) => numCount[c.n - 1]++);
-    const s = { pool, numCount, seed: seed >>> 0, round: 0, mult: 0, totals: [0, 0], roundScores: [], last: 0, over: false };
+    const s = { pool, numCount, seed: seed >>> 0, round: 0, mult: 0, totals: [0, 0], roundScores: [], last: 0, over: false, hideFourth: !!opts.hideFourth, hiddenId: null };
     startRound(s, rnd(s) < 0.5 ? 0 : 1);
     return s;
   }
@@ -178,7 +183,7 @@ const PIXIES = (() => {
     else if (++s.pickIdx === REVEAL) {
       if (s.draw.length < REVEAL) endRound(s);
       else {
-        s.reveal = s.draw.splice(0, REVEAL);
+        deal(s);
         s.starter = s.last;
         s.turn = s.starter;
         s.pickIdx = 0;

@@ -402,5 +402,8 @@ dialog::backdrop { background: rgba(20,30,20,.6); }
 .pgame .ptop .pturn > .preveal, .pgame .ptop .pturn > .pchoice { margin: auto 0; }
 .pgame .ptop .pturn > .pside { margin-top: 0; }
 
+/* practice: hidden card */
+.pc.hid i { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: calc(var(--cw) * .75); color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,.5); }
+
 /* practice: card flight */
 .pc.ghost { z-index: 1000; pointer-events: none; transition: none; box-shadow: 0 0 0 1px #151515, 0 8px 16px rgba(0,0,0,.4); }

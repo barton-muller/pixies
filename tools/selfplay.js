@@ -9,7 +9,7 @@ const arg = (k, d) => {
   return i < 0 ? d : process.argv[i + 1];
 };
 
-const games = +arg("games", 100), seed = +arg("seed", 1);
+const games = +arg("games", 100), seed = +arg("seed", 1), hidden = process.argv.includes("--hidden");
 const specs = [arg("a", "greedy"), arg("b", "random")];
 const bots = specs.map(B.make);
 
@@ -19,7 +19,7 @@ let draws = 0;
 const t0 = Date.now();
 
 for (let g = 0; g < games; g++) {
-  const swap = g % 2, s = E.newGame(seed + g), r = E.rng(seed * 7919 + g);
+  const swap = g % 2, s = E.newGame(seed + g, undefined, { hideFourth: hidden }), r = E.rng(seed * 7919 + g);
   while (!s.over) E.step(s, bots[(s.turn + swap) % 2].choose(s, r));
   const mine = swap, { totals, winner } = E.result(s);
   margins.push(totals[mine] - totals[1 - mine]);
@@ -31,6 +31,6 @@ for (let g = 0; g < games; g++) {
 const mean = margins.reduce((a, b) => a + b, 0) / games;
 const sd = Math.sqrt(margins.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, games - 1));
 const p = points / games, ci = 1.96 * Math.sqrt((p * (1 - p)) / games);
-console.log(`${specs[0]} vs ${specs[1]}  (${games} games, seats alternated, ${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+console.log(`${specs[0]} vs ${specs[1]}  (${games} games${hidden ? ", hidden 4th card" : ""}, seats alternated, ${((Date.now() - t0) / 1000).toFixed(1)}s)`);
 console.log(`wins ${wins[0]}-${wins[1]}  draws ${draws}  score ${(100 * p).toFixed(1)}% ±${(100 * ci).toFixed(1)}`);
 console.log(`mean margin ${mean.toFixed(1)} ±${((1.96 * sd) / Math.sqrt(games)).toFixed(1)}`);

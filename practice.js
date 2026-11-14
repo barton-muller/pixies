@@ -26,11 +26,14 @@ const PRACTICE = (() => {
   let s = saved.game ? saved.game.s : null;
   let summary = saved.game ? saved.game.summary : null;
   let log = saved.game ? saved.game.log : "";
-  let sel = null, choosing = false, warn = "", hint = null, hintBusy = false, hist = [];
+  let hide = !!saved.hide;
+  let lock = saved.game && saved.game.lock !== undefined ? saved.game.lock : null;
+  let sel = lock, choosing = false, warn = "", hint = null, hintBusy = false, hist = [];
   let busy = false, token = 0, ver = 0, worker, workerOff = false;
+  const recKey = (h) => level + (h ? "+hidden" : "");
 
   const persist = () => {
-    try { localStorage.setItem(KEY, JSON.stringify({ level, rec, game: s ? { s, summary, log } : null })); } catch { /* storage unavailable */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ level, hide, rec, game: s ? { s, summary, log, lock } : null })); } catch { /* storage unavailable */ }
   };
 
   /* ---------- bot ---------- */
@@ -90,7 +93,7 @@ const PRACTICE = (() => {
     ask(s, HINT_SPEC).then((m) => {
       if (mine !== ver) return;
       hintBusy = false;
-      hint = m;
+      hint = s.hiddenId === m.id && s.reveal.some((c) => c.id === m.id) ? { id: m.id, blind: true } : m;
       render();
     });
   }
@@ -103,13 +106,15 @@ const PRACTICE = (() => {
   };
 
   function describe(c, m) {
-    const p = s.turn, n = c.n, dn = s.down[p][n - 1];
-    if (m.kind === 1) return `${who(p)} placed ${desc(c)} on space ${n}${dn ? ", validating it" : ""}.`;
-    if (m.kind === 2) return `${who(p)} added ${desc(c)} to space ${n}: ${m.opt === 0 ? "new card on top" : "new card underneath"}.`;
-    return m.opt >= 0 ? `${who(p)} put ${desc(c)} face-down on space ${m.opt + 1}.` : `${who(p)} discarded ${desc(c)}.`;
+    const p = s.turn, n = c.n, dn = s.down[p][n - 1], hid = c.id === s.hiddenId, secret = hid && p === BOT && m.kind === 3;
+    const lead = hid ? `${who(p)} took the hidden card${secret ? "" : ` (${desc(c)})`} and ` : `${who(p)} `, obj = hid ? "it" : desc(c);
+    if (m.kind === 1) return `${lead}placed ${obj} on space ${n}${dn ? ", validating it" : ""}.`;
+    if (m.kind === 2) return `${lead}added ${obj} to space ${n}: ${m.opt === 0 ? "new card on top" : "new card underneath"}.`;
+    return m.opt >= 0 ? `${lead}put ${obj} face-down on space ${m.opt + 1}.` : `${lead}discarded ${obj}.`;
   }
 
   function hintText(c, m) {
+    if (m.blind) return "Hint: take the hidden card.";
     const gain = E.scoreAfter(s, YOU, c, m) - E.score(s, YOU).total, n = c.n;
     const where = m.kind === 1 ? `place it on space ${n}` : m.kind === 2 ? `put it ${m.opt === 0 ? "on top of" : "underneath"} the card on space ${n}` : m.opt >= 0 ? `put it face-down on space ${m.opt + 1}` : "discard it";
     return `Hint: take ${desc(c)} and ${where} (${signed(gain)} now).`;
@@ -117,12 +122,13 @@ const PRACTICE = (() => {
 
   function apply(m) {
     const c = s.reveal.find((x) => x.id === m.id);
-    if (s.turn === YOU) hist.push(JSON.stringify({ s, summary, log, rec }));
+    if (s.turn === YOU) hist.push(JSON.stringify({ s, summary, log, rec, lock }));
     const flight = lift(m.id);
     log = describe(c, m);
     const rounds = s.roundScores.length;
     E.step(s, m);
     ver++;
+    lock = null;
     sel = null;
     choosing = false;
     hint = null;
@@ -131,7 +137,7 @@ const PRACTICE = (() => {
     if (s.roundScores.length > rounds) {
       summary = s.lastBoard;
       if (s.over) {
-        const r = (rec[level] ||= [0, 0, 0]), i = s.totals[0] > s.totals[1] ? 0 : s.totals[0] < s.totals[1] ? 1 : 2;
+        const r = (rec[recKey(s.hideFourth)] ||= [0, 0, 0]), i = s.totals[0] > s.totals[1] ? 0 : s.totals[0] < s.totals[1] ? 1 : 2;
         r[i]++;
       }
     }
@@ -152,7 +158,8 @@ const PRACTICE = (() => {
     log = o.log;
     Object.keys(rec).forEach((k) => delete rec[k]);
     Object.assign(rec, o.rec);
-    sel = null;
+    lock = o.lock ?? null;
+    sel = lock;
     choosing = false;
     hint = null;
     hintBusy = false;
@@ -237,12 +244,13 @@ const PRACTICE = (() => {
   }
 
   function setupHtml() {
-    const l = LEVELS.find((x) => x.id === level), r = rec[level] || [0, 0, 0];
+    const l = LEVELS.find((x) => x.id === level), r = rec[recKey(hide)] || [0, 0, 0];
     return `<div class="card">
       <div class="bar">Practice vs bot</div>
       <div class="seg">${LEVELS.map((x) => `<button data-level="${x.id}" class="${x.id === level ? "on" : ""}">${x.name}</button>`).join("")}</div>
       <p class="hint">${l.note}</p>
-      <p class="hint">Your record on ${l.name}: ${r[0]} won · ${r[1]} lost · ${r[2]} tied</p>
+      <label class="switch"><span>Hidden 4th card<small>One revealed card stays face-down. Taking it is a gamble: you only see it once you commit.</small></span><input type="checkbox" id="p-hide" ${hide ? "checked" : ""}></label>
+      <p class="hint">Your record on ${l.name}${hide ? " with a hidden card" : ""}: ${r[0]} won · ${r[1]} lost · ${r[2]} tied</p>
       <button class="btn" id="p-start">Start game</button>
     </div>
     <div class="card">
@@ -258,7 +266,10 @@ const PRACTICE = (() => {
   function turnPanel() {
     const mine = s.turn === YOU && !busy;
     const hinted = hint && s.reveal.find((x) => x.id === hint.id);
-    const cards = s.reveal.map((c) => `<button class="prev${sel === c.id ? " sel" : ""}${hinted && hinted.k === c.k ? " hint" : ""}" data-pick="${c.id}" ${mine ? "" : "disabled"}>${card(c)}</button>`).join("");
+    const hid = s.hiddenId !== null && lock !== s.hiddenId ? s.reveal.find((x) => x.id === s.hiddenId) : null;
+    const isHint = (c) => hint && (hint.blind ? c.id === hint.id : hinted && hinted.k === c.k);
+    const face = (c) => (c === hid ? `<div class="pc down hid" data-id="${c.id}"><i>?</i></div>` : card(c));
+    const cards = s.reveal.map((c) => `<button class="prev${sel === c.id ? " sel" : ""}${isHint(c) ? " hint" : ""}" data-pick="${c.id}" ${mine && (lock === null || lock === c.id) ? "" : "disabled"}>${face(c)}</button>`).join("");
     let body = `<div class="preveal">${cards}${rep('<div class="pghost"></div>', 4 - s.reveal.length)}</div>`;
     let head = busy ? "Bot is thinking…" : mine ? `Your pick · card ${s.pickIdx + 1} of 4${s.round === 1 ? ". Tap a card, then a space." : ""}` : "";
     if (mine && sel !== null) {
@@ -275,7 +286,7 @@ const PRACTICE = (() => {
     }
     if (hinted && !choosing) head = hintText(hinted, hint);
     if (warn) head = warn;
-    const side = `<div class="pside"><button class="pico" id="p-hint" aria-label="Hint" title="Hint" ${mine && !hintBusy ? "" : "disabled"}>${hintBusy ? "…" : "?"}</button><button class="pico" id="p-undo" aria-label="Undo" title="Undo" ${hist.length ? "" : "disabled"}>${UNDO}</button></div>`;
+    const side = `<div class="pside"><button class="pico" id="p-hint" aria-label="Hint" title="Hint" ${mine && !hintBusy && lock === null ? "" : "disabled"}>${hintBusy ? "…" : "?"}</button><button class="pico" id="p-undo" aria-label="Undo" title="Undo" ${hist.length ? "" : "disabled"}>${UNDO}</button></div>`;
     return { head: `<div class="phint${warn ? " warn" : hinted && !choosing ? " tip" : ""}">${head}</div>`, panel: `<div class="pturn">${body}${side}</div>` };
   }
 
@@ -326,6 +337,10 @@ const PRACTICE = (() => {
 
   function render() {
     const el = document.getElementById("view-practice");
+    if (lock !== null && !(s && s.reveal.some((c) => c.id === lock))) {
+      if (sel === lock) sel = null;
+      lock = null;
+    }
     el.innerHTML = !s ? setupHtml() : summary ? summaryHtml() : gameHtml();
     document.body.classList.toggle("pplay", !!s && !el.hidden);
     flying.forEach((id) => { const t = board(id); if (t) t.style.visibility = "hidden"; });
@@ -333,10 +348,18 @@ const PRACTICE = (() => {
     const on = (q, fn) => el.querySelectorAll(q).forEach((b) => b.addEventListener("click", () => fn(b)));
     on("[data-level]", (b) => { level = b.dataset.level; persist(); render(); });
     on("#p-start", start);
+    const hideBox = el.querySelector("#p-hide");
+    if (hideBox) hideBox.addEventListener("change", () => { hide = hideBox.checked; persist(); render(); });
     on("[data-pick]", (b) => {
-      sel = sel === +b.dataset.pick ? null : +b.dataset.pick;
+      const id = +b.dataset.pick;
+      if (lock !== null && lock !== id) return;
+      const peek = s.hiddenId === id && lock === null;
+      if (peek) { lock = id; persist(); }
+      sel = lock === id ? id : sel === id ? null : id;
       choosing = false;
       render();
+      const face = peek && !reduced() && document.querySelector(".prev.sel .pc");
+      if (face) face.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }], { duration: 280, easing: "ease-out" });
     });
     on(".parea.me .pcell", (b) => tapCell(+b.dataset.cell));
     on("[data-place]", (b) => { if (s.turn === YOU && !busy && sel !== null) apply({ id: sel, ...JSON.parse(b.dataset.place) }); });
@@ -357,6 +380,7 @@ const PRACTICE = (() => {
     token++;
     ver++;
     busy = false;
+    lock = null;
     sel = null;
     choosing = false;
     hint = null;
@@ -368,7 +392,7 @@ const PRACTICE = (() => {
 
   function start() {
     clearUi();
-    s = E.newGame((Math.random() * 2 ** 31) | 0);
+    s = E.newGame((Math.random() * 2 ** 31) | 0, undefined, { hideFourth: hide });
     log = "";
     persist();
     render();

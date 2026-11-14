@@ -129,4 +129,37 @@ for (const spec of [["random", "random"], ["greedy", "greedy:0.2"], ["mc:3", "gr
   }
 }
 
+// Hidden fourth card: the engine marks one card per reveal, and bots never use its identity.
+{
+  const h = E.newGame(5, undefined, { hideFourth: true });
+  assert.strictEqual(h.hiddenId, h.reveal[3].id);
+  assert.strictEqual(E.newGame(5).hiddenId, null);
+
+  for (const spec of ["random", "greedy", "greedy:0.2", "mc:6"]) {
+    const bot = B.make(spec);
+    for (let g = 0; g < 4; g++) {
+      const s = E.newGame(g + 40, undefined, { hideFourth: true }), r = E.rng(g + 7);
+      let checked = 0;
+      while (!s.over) {
+        const hid = s.reveal.find((c) => c.id === s.hiddenId);
+        if (hid && s.draw.length > 6 && checked < 6) {
+          // swap the hidden card's identity with a different card from the draw pile
+          const alt = s.draw.find((c) => c.k !== hid.k);
+          const t = E.clone(s);
+          t.reveal = t.reveal.map((c) => (c === hid ? { ...alt, id: hid.id } : c));
+          t.draw = t.draw.map((c) => (c === alt ? hid : c));
+          const a = bot.choose(E.clone(s), E.rng(g * 31 + checked)), b = bot.choose(t, E.rng(g * 31 + checked));
+          assert.strictEqual(a.id === hid.id, b.id === hid.id, `${spec}: decision depends on the hidden card`);
+          if (a.id !== hid.id) assert.deepStrictEqual(a, b, `${spec}: visible move depends on the hidden card`);
+          checked++;
+        }
+        const m = bot.choose(s, r);
+        assert.ok(E.legalMoves(s).some((x) => JSON.stringify(x) === JSON.stringify(m)), `${spec}: illegal move in hidden mode`);
+        E.step(s, m);
+      }
+      assert.strictEqual(s.roundScores.length, 3);
+    }
+  }
+}
+
 console.log("ok");
