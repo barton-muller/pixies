@@ -4,13 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1c3a22">
+<meta name="description" content="Score pad, rules explainer and practice bot for the board game Pixies.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pixies">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Pixies Score Pad</title>
-<link rel="icon" href="img/icon.png">
-<link rel="apple-touch-icon" href="img/icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("pixies.theme");
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.dataset.theme = t;
+  } catch (e) { /* default light theme */ }
+})();
+</script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="banner">
+  <button class="themebtn" id="theme" type="button" aria-label="Switch to dark mode" title="Dark mode"></button>
   <img class="logo" src="img/logo.png" alt="Pixies" width="655" height="275">
   <span class="sub-title">score pad</span>
 </header>

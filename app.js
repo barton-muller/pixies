@@ -424,5 +424,39 @@ document.querySelectorAll(".tabs button").forEach((b) => b.addEventListener("cli
   show();
 }));
 
+/* ---------- theme and offline support ---------- */
+
+const THEME = {
+  key: "pixies.theme",
+  sun: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
+  moon: svg('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'),
+};
+
+function applyTheme(t) {
+  document.documentElement.dataset.theme = t;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = t === "dark" ? "#0d1a11" : "#1c3a22";
+  const b = $("#theme");
+  if (!b) return;
+  b.innerHTML = t === "dark" ? THEME.sun : THEME.moon;
+  b.setAttribute("aria-label", t === "dark" ? "Switch to light mode" : "Switch to dark mode");
+  b.title = t === "dark" ? "Light mode" : "Dark mode";
+}
+
+$("#theme").addEventListener("click", () => {
+  const t = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  try { localStorage.setItem(THEME.key, t); } catch { /* storage unavailable */ }
+  applyTheme(t);
+});
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+  try { if (localStorage.getItem(THEME.key)) return; } catch { /* follow the system */ }
+  applyTheme(e.matches ? "dark" : "light");
+});
+applyTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => { /* offline support is optional */ }));
+}
+
 show();
 syncSoon();

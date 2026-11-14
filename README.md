@@ -43,6 +43,12 @@ node tools/selfplay.js --games 200 --a mc:30 --b greedy
 
 Rule interpretation: in a 2-player round, once a player's area is full the round ends as soon as both players have placed the same number of cards. A card that must go facedown with no empty space is discarded.
 
+## Install, offline and dark mode
+
+The site is an installable PWA (`manifest.webmanifest`, icons in `img/`, `sw.js`). On Android, Chrome offers "Install app"; other browsers may only offer a home-screen shortcut. The service worker precaches every file, serves network-first (a new deploy shows up on the next load) and falls back to the cache offline, including the Practice bot's worker. Cross-origin calls such as gist sync are never cached. List new files in `ASSETS` in `sw.js` so they work offline on first load.
+
+Dark mode follows the system setting by default; the sun/moon button in the banner overrides it and the choice is remembered. Colours are CSS variables on `:root`, with the dark values under `:root[data-theme="dark"]`.
+
 ## Data and sync
 
 Everything lives in `localStorage` (`pixies.*` keys), per browser. Clearing site data erases it unless sync is on.
@@ -73,6 +79,8 @@ sync.js      gist sync and merge logic
 battle.js    rules explainer for the house variant
 practice.js  Practice tab (play against the bot)
 config.js    sync settings, written by tools/setup_sync.py
+sw.js        service worker (offline support)
+manifest.webmanifest   PWA manifest
 bot/         base-game engine, deck, bots, worker
 tools/       setup_sync.py, selfplay.js, test_engine.js
 img/         logo, cover, moss background, avatars, icons
