@@ -22,9 +22,11 @@ Pixie bonus points are included in saved totals when the toggle was on, so avera
 
 The Battles tab is an animated step-by-step tutorial (with one tap-to-answer step) for a two-player house variant: shared 3×3 grids, piles won by the top card, boosters, jokers and face-down cards, ending with a worked scoring example that uses the Round 2 block of the score pad. The content lives in `battle.js`.
 
-## Practice bot
+## Practice tab
 
-`bot/engine.js` implements the base game for two players (not the Battles house variant): public 4-card reveals, alternating picks, the three placement cases, round end, three rounds, and scoring (validated cards, spirals/crosses, specials, largest colour zone ×2/×3/×4). `bot/deck.js` is the 70-card deck transcribed from photos. `bot/bot.js` has the opponents. Both run in Node and the browser; nothing is wired into the UI yet.
+The Practice tab plays a full 3-round game of base Pixies against a bot: tap one of the revealed cards, then place it (the tab shows where it goes, asks which card stays on top when a space already has one, or lets you tap an empty space for a face-down card). Four levels, Easy to Expert; the record per level and the game in progress survive reloads. The bot runs in a Web Worker (`bot/worker.js`) and falls back to the main thread when workers are unavailable, e.g. when `index.html` is opened as a file.
+
+`bot/engine.js` implements the base game for two players (not the Battles house variant): public 4-card reveals, alternating picks, the three placement cases, round end, three rounds, and scoring (validated cards, spirals/crosses, specials, largest colour zone ×2/×3/×4). `bot/deck.js` is the 70-card deck transcribed from photos. `bot/bot.js` has the opponents; `practice.js` is the tab.
 
 | spec | behaviour |
 | --- | --- |
@@ -69,8 +71,9 @@ style.css    styling
 app.js       state, scoring, views, stats
 sync.js      gist sync and merge logic
 battle.js    rules explainer for the house variant
+practice.js  Practice tab (play against the bot)
 config.js    sync settings, written by tools/setup_sync.py
-bot/         base-game engine, deck and bots
+bot/         base-game engine, deck, bots, worker
 tools/       setup_sync.py, selfplay.js, test_engine.js
 img/         logo, cover, moss background, avatars, icons
 ```

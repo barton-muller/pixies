@@ -158,7 +158,8 @@ const PIXIES = (() => {
   /* ---------- transitions ---------- */
 
   function endRound(s) {
-    const a = score(s, 0).total, b = score(s, 1).total;
+    const bd = [score(s, 0), score(s, 1)], a = bd[0].total, b = bd[1].total;
+    s.lastBoard = { round: s.round, mult: s.mult, up: s.up.map((x) => x.slice()), down: s.down.map((x) => x.slice()), bd };
     s.roundScores.push([a, b]);
     s.totals[0] += a;
     s.totals[1] += b;
