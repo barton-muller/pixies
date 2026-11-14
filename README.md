@@ -22,6 +22,25 @@ Pixie bonus points are included in saved totals when the toggle was on, so avera
 
 The Battles tab is an animated step-by-step tutorial (with one tap-to-answer step) for a two-player house variant: shared 3×3 grids, piles won by the top card, boosters, jokers and face-down cards, ending with a worked scoring example that uses the Round 2 block of the score pad. The content lives in `battle.js`.
 
+## Practice bot
+
+`bot/engine.js` implements the base game for two players (not the Battles house variant): public 4-card reveals, alternating picks, the three placement cases, round end, three rounds, and scoring (validated cards, spirals/crosses, specials, largest colour zone ×2/×3/×4). `bot/deck.js` is the 70-card deck transcribed from photos. `bot/bot.js` has the opponents. Both run in Node and the browser; nothing is wired into the UI yet.
+
+| spec | behaviour |
+| --- | --- |
+| `random` | uniform over legal picks and placements |
+| `greedy[:eps]` | maximises own score gain plus half the gain it denies the opponent, random pick with probability `eps` |
+| `mc:N` | N sampled draw orders, one greedy playout to the end of the round per candidate move |
+
+The only hidden information is the draw order, so `mc` resamples the unseen cards and never reads the real deck order.
+
+```sh
+node tools/test_engine.js
+node tools/selfplay.js --games 200 --a mc:30 --b greedy
+```
+
+Rule interpretation: in a 2-player round, once a player's area is full the round ends as soon as both players have placed the same number of cards. A card that must go facedown with no empty space is discarded.
+
 ## Data and sync
 
 Everything lives in `localStorage` (`pixies.*` keys), per browser. Clearing site data erases it unless sync is on.
@@ -51,7 +70,8 @@ app.js       state, scoring, views, stats
 sync.js      gist sync and merge logic
 battle.js    rules explainer for the house variant
 config.js    sync settings, written by tools/setup_sync.py
-tools/       setup_sync.py
+bot/         base-game engine, deck and bots
+tools/       setup_sync.py, selfplay.js, test_engine.js
 img/         logo, cover, moss background, avatars, icons
 ```
 
